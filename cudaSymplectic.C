@@ -6,7 +6,7 @@
 #include "matlabArray.h"
 #include "matlabStructures.h"
 #include "matlabData.h"
-//#include "complex.h"
+#include "cudaOpenmpMD.h"
 
 void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[])
@@ -24,20 +24,14 @@ void mexFunction(int nlhs, mxArray *plhs[],
   insist(mxPtr);
   MatlabData::r1(new RadialCoordinate(mxPtr));
 
-  // std::cout << *MatlabData::r1() << std::endl;
-
   mxPtr = mxGetField(prhs[0], 0, "r2");
   insist(mxPtr);
   MatlabData::r2(new RadialCoordinate(mxPtr));
   
-  // std::cout << *MatlabData::r2() << std::endl;
-
   mxPtr = mxGetField(prhs[0], 0, "theta");
   insist(mxPtr);
   MatlabData::theta(new AngleCoordinate(mxPtr));
   
-  // std::cout << *MatlabData::theta() << std::endl;
-
   mxPtr = mxGetField(prhs[0], 0, "potential");
   insist(mxPtr);
   MatlabData::potential(MatlabArray<double>(mxPtr).data());
@@ -46,19 +40,17 @@ void mexFunction(int nlhs, mxArray *plhs[],
   insist(mxPtr);
   MatlabData::time(new EvolutionTime(mxPtr));
 
-  std::cout << *MatlabData::time() << std::endl;
-
   mxPtr = mxGetField(prhs[0], 0, "options");
   insist(mxPtr);
   MatlabData::options(new Options(mxPtr));
 
-  std::cout << *MatlabData::options() << std::endl;
-
   mxPtr = mxGetField(prhs[0], 0, "wavepacket_parameters");
   insist(mxPtr);
   MatlabData::wavepacket_parameters(new WavepacketParameters(mxPtr));
-  
-  std::cout << *MatlabData::wavepacket_parameters() << std::endl;
 
+  CUDAOpenmpMD evolCUDA;
+  evolCUDA.test();
+  
   std::cout.flush();
+  std::cout.precision(np);
 }

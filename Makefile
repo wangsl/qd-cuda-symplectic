@@ -36,19 +36,19 @@ CUDAArchs= \
         -gencode arch=compute_52,code=compute_52 \
 	-Xcompiler=\"-fPIC -pthread -fexceptions -m64 -fopenmp\"
 
-NVCCFLAGS = $(NVCCINCLUDE) $(CUDAArchs) -O3 -prec-div=true -prec-sqrt=true -rdc=true -std=c++11 
+NVCCFLAGS = $(NVCCINCLUDE) $(CUDAArchs) -prec-div=true -prec-sqrt=true -rdc=true -std=c++11 
 
 CXXFLAGS = -std=c++11 $(NVCCINCLUDE)
 
 Link = $(CXX)
 
-LIBS = #-lifcoremt -lgomp -L$(CUDA_LIB) -lcufft -lcublas -lcudart -lmkl_rt
+LIBS = -lifcoremt -L$(CUDA_LIB) -lcufft -lcublas -lcudart #-lmkl_rt
 
 MEXA64Files = $(O)/cudaSymplectic.mexa64 $(O)/DMBEIVMex.mexa64
 
-CUDAObjs = 
+CUDAObjs = $(O)/cudaOpenmpMD.o $(O)/cudaUtils.o $(O)/wavepacketson1device.o
 
-CUDALinkObj = #$(O)/cudalink.o
+CUDALinkObj = $(O)/cudalink.o
 
 OBJS = $(O)/cudaSymplectic.o  $(O)/matlabUtils.o \
 	$(O)/fcnpak.o \
@@ -100,7 +100,7 @@ cleancuda:
 
 depend :
 	$(CXX) $(CXXFLAGS) -MM *.[cC] | perl dep.pl > $@
-	#$(NVCC) $(CXXFLAGS) -M *.cu | perl dep.pl >> $@
+	$(NVCC) $(CXXFLAGS) -M *.cu | perl dep.pl >> $@
 
 ifneq ($(MAKECMDGOALS), clean)
 include depend
