@@ -89,7 +89,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 % PlotPotWave(r1, r2, potential, psi)
 
 J = 5;
-parity = 1;
+parity = 0;
 lMax = 120;
 
 wavepacket_parameters.J = int32(J);

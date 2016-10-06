@@ -2,6 +2,8 @@
 #ifndef WAVEPACKETS_ON_SINGLE_DEVICE
 #define WAVEPACKETS_ON_SINGLE_DEVICE
 
+#include <cublas_v2.h>
+
 class WavepacketsOnSingleDevice
 {
 public:
@@ -17,14 +19,20 @@ private:
   int omega_start;
   int n_omegas;
 
+  double *potential_dev;
+
+  cublasHandle_t cublas_handle;
+  int _has_created_cublas_handle;
+
   int device_index() const { return _device_index; }
   int current_device_index() const;
   void setup_device() const;
 
-  double *potential_dev;
-
   void setup_data_on_device();
   void destroy_data_on_device();
+
+  void setup_cublas_handle();
+  void destroy_cublas_handle();
 
   void setup_potential_on_device();
 

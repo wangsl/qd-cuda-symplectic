@@ -5,6 +5,7 @@
 #include "cudaOpenmpMD.h"
 #include "cudaUtils.h"
 #include "matlabUtils.h"
+#include "matlabData.h"
 
 inline static void divide_into_chunks(const int n, const int m, int *chunks)
 {
@@ -18,10 +19,12 @@ CUDAOpenmpMD::CUDAOpenmpMD() :
   _n_devices(0)
 { 
   setup_n_devices();
+  setup_wavepackets_on_single_device();
 }
 
 CUDAOpenmpMD::~CUDAOpenmpMD() 
 { 
+  destroy_wavepackets_on_single_device();
   reset_devices();
 }
 
@@ -62,8 +65,59 @@ void CUDAOpenmpMD::reset_devices()
   }
 }
 
-void CUDAOpenmpMD::test()
-{
-  devices_memory_usage();
+void CUDAOpenmpMD::setup_wavepackets_on_single_device()
+{ 
+  insist(n_devices() > 0);
+  
+  insist(wavepackets_on_single_device.size() == 0);
+  wavepackets_on_single_device.resize(n_devices(), 0);
+
+  const int &n = wavepackets_on_single_device.size();
+
+  Vec<int> omegas(n);
+
+  const int &omega_min = MatlabData::wavepacket_parameters()->omega_min;
+  const int &omega_max = MatlabData::wavepacket_parameters()->omega_max;
+  const int n_omegas = omega_max - omega_min + 1;
+
+  divide_into_chunks(n_omegas, n, omegas);
+
+  std::cout << " Omegas on devices: "; 
+  omegas.show_in_one_line();
+  
+  int omega_start = 0;
+  for(int i_dev = 0; i_dev < n; i_dev++) {
+    
+    checkCudaErrors(cudaSetDevice(i_dev));
+    
+    const int n_omegas = omegas[i_dev];
+
+    // std::cout << " " << i_dev << " " << omega_start << " " << n_omegas << std::endl;
+    
+    wavepackets_on_single_device[i_dev] = 
+      new WavepacketsOnSingleDevice(i_dev, omega_start, n_omegas);
+    
+    insist(wavepackets_on_single_device[i_dev]);
+
+    omega_start += n_omegas;
+  }
+  
   devices_synchoronize();
+  devices_memory_usage();
 }
+
+void CUDAOpenmpMD::destroy_wavepackets_on_single_device()
+{
+  const int &n = wavepackets_on_single_device.size();
+  for(int i = 0; i < n; i++) {
+    if(wavepackets_on_single_device[i]) { 
+      delete wavepackets_on_single_device[i];
+      wavepackets_on_single_device[i] = 0; 
+    }
+  }
+  wavepackets_on_single_device.resize(0);
+}
+
+void CUDAOpenmpMD::test()
+{ }
+
