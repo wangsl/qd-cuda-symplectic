@@ -43,7 +43,6 @@ private:
   void destroy_cufft_plans();
 
   void setup_potential_on_device();
-
 };
 
 #endif /* WAVEPACKETS_ON_SINGLE_DEVICE */

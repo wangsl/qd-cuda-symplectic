@@ -1,10 +1,14 @@
 
 #include <iostream>
 #include <iomanip>
+
 #include <cuda_runtime.h>
 #include <helper_functions.h> 
 #include <helper_cuda.h>
+#include <cufft.h>
+
 #include "cudaUtils.h"
+#include "matlabUtils.h"
 
 void cudaUtils::gpu_memory_usage()
 {
@@ -25,6 +29,23 @@ void cudaUtils::gpu_memory_usage()
 	    << " used = " << std::fixed << (total_byte-free_byte)/1024.0/1024.0 << "MB,"
 	    << " free = " << free_byte/1024.0/1024.0 << "MB,"
 	    << " total = " << total_byte/1024.0/1024.0 << "MB" << std::endl;
+
+  std::cout.flags(old_flags);
+  std::cout.precision(old_precision);
+}
+
+void cudaUtils::cufft_work_size(const cufftHandle &plan, const char *type)
+{
+  std::ios_base::fmtflags old_flags = std::cout.flags();
+  std::streamsize old_precision = std::cout.precision();
+  
+  std::cout.precision(2);
+  
+  size_t cufft_work_size = 0;
+  insist(cufftGetSize(plan, &cufft_work_size) == CUFFT_SUCCESS);
+  std::cout << " Work area size for CUFFT";
+  if(type) std::cout << " " << type;
+  std::cout << ":" << " " << std::fixed << cufft_work_size/1024.0/1024.0 << "MB" << std::endl;
 
   std::cout.flags(old_flags);
   std::cout.precision(old_precision);

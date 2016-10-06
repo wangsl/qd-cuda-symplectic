@@ -51,7 +51,7 @@ fprintf(' Gaussian wavepacket kinetic energy: %.12f\n', eGT)
 
 % r2: r
 
-r2.n = int32(256);
+r2.n = int32(512);
 r2.r = linspace(1.5, 12.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
@@ -67,7 +67,7 @@ fprintf(' Dviding surface: %.8f\n', r2Div);
 
 % theta
 
-theta.n = int32(180);
+theta.n = int32(244);
 [ theta.x, theta.w ] = GaussLegendreGrids(theta.n);
 
 %theta.legendre = LegendreP2(double(theta.m), theta.x);
@@ -90,7 +90,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 J = 5;
 parity = 0;
-lMax = 120;
+lMax = 180;
 
 wavepacket_parameters.J = int32(J);
 wavepacket_parameters.parity = int32(parity);

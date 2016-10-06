@@ -15,6 +15,8 @@ namespace cudaUtils {
   { return n/n_threads*n_threads == n ? n/n_threads : n/n_threads+1; }
   
   void gpu_memory_usage();
+
+  void cufft_work_size(const cufftHandle &plan, const char *type = 0);
 }
 
 inline char *time_now()

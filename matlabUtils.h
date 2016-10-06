@@ -29,8 +29,8 @@
 
 void MatlabCrashLoc(const char *message, const char *file_name, const int line);
 
-//void wavepacket_to_matlab(const char *script, const int nrhs, mxArray *prhs[]);
-//void wavepacket_to_matlab(const char *script);
+// void wavepacket_to_matlab(const char *script, const int nrhs, mxArray *prhs[]);
+// void wavepacket_to_matlab(const char *script);
 
 inline int file_exist(const char *file_name)
 { return access(file_name, F_OK) ? 0 : 1; }

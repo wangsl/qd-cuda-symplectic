@@ -119,6 +119,8 @@ public:
   Vec<RVec> weighted_wavepackets_real;
   Vec<RVec> weighted_wavepackets_imag;
 
+  int legendre_wavepackets_size() { return l_max - omega_min + 1; }
+
 private:
   const mxArray *mx;
 
@@ -157,7 +159,6 @@ private:
 
   friend ostream & operator <<(ostream &s, const CummulativeReactionProbabilities &c);
   void write_fields(ostream &s) const;
-  
 };
 
 #endif

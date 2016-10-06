@@ -116,12 +116,15 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
 		       NULL, 1, n1*n2,
 		       CUFFT_D2Z, n_ass_Legs) == CUFFT_SUCCESS);
 
+  cudaUtils::cufft_work_size(cufft_plan_D2Z, "D2Z");
+  
   insist(cufftPlanMany(&cufft_plan_Z2D, 2, const_cast<int *>(dims), 
 		       NULL, 1, n1*n2,
 		       NULL, 1, n1*n2,
 		       CUFFT_Z2D, n_ass_Legs) == CUFFT_SUCCESS);
-  
-  
+
+  cudaUtils::cufft_work_size(cufft_plan_Z2D, "Z2D");
+
   _has_cufft_plans = 1;
 }
 
