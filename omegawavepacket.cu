@@ -7,8 +7,8 @@
 #include "matlabUtils.h"
 #include "matlabData.h"
 
-OmegaWavepacket::OmegaWavepacket(const int &omega_,
-				 const double * &potential_dev_, 
+OmegaWavepacket::OmegaWavepacket(int omega_,
+				 const double *potential_dev_, 
 				 cublasHandle_t &cublas_handle_,
 				 cufftHandle &cufft_plan_D2Z_,
 				 cufftHandle &cufft_plan_Z2D_
@@ -19,11 +19,13 @@ OmegaWavepacket::OmegaWavepacket(const int &omega_,
   cufft_plan_D2Z(cufft_plan_D2Z_),
   cufft_plan_Z2D(cufft_plan_Z2D_),
   weighted_psi_real(0), weighted_psi_imag(0), 
-  weighted_psi_real_dev(0), weighted_psi_imag_dev(0)
+  weighted_psi_real_dev(0), weighted_psi_imag_dev(0),
+  weighted_associated_legendres_dev(0)
 { 
-  insist(weighted_psi_real && weighted_psi_imag && potential_dev);
+  insist(potential_dev);
 
-  copy_weighted_psi_from_device_to_host();
+  copy_weighted_psi_from_host_to_device();
+  copy_weighted_associated_legendres_to_device();
 }
 
 OmegaWavepacket::~OmegaWavepacket()
@@ -35,6 +37,7 @@ OmegaWavepacket::~OmegaWavepacket()
 
   _CUDA_FREE_(weighted_psi_real_dev);
   _CUDA_FREE_(weighted_psi_imag_dev);
+  _CUDA_FREE_(weighted_associated_legendres_dev);
 }
 
 void OmegaWavepacket::copy_weighted_psi_from_host_to_device()
@@ -42,9 +45,9 @@ void OmegaWavepacket::copy_weighted_psi_from_host_to_device()
   std::cout << " Copy OmegaWavepacket from host to device, Omega: " << omega << std::endl;
 
   setup_weighted_psi();
-  
+
   insist(weighted_psi_real && weighted_psi_imag);
-  
+
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
@@ -82,8 +85,11 @@ void OmegaWavepacket::copy_weighted_psi_from_device_to_host()
 
 void OmegaWavepacket::setup_weighted_psi()
 {
-  if(weighted_psi_real || weighted_psi_imag) return;
-
+  if(weighted_psi_real || weighted_psi_imag) {
+    insist(weighted_psi_real && weighted_psi_imag);
+    return;
+  }
+  
   const int &omega_min = MatlabData::wavepacket_parameters()->omega_min;
   Vec<RVec> &weighted_wavepackets_real = MatlabData::wavepacket_parameters()->weighted_wavepackets_real;
   Vec<RVec> &weighted_wavepackets_imag = MatlabData::wavepacket_parameters()->weighted_wavepackets_imag;
@@ -92,4 +98,30 @@ void OmegaWavepacket::setup_weighted_psi()
   
   weighted_psi_real = weighted_wavepackets_real[omega_index];
   weighted_psi_imag = weighted_wavepackets_imag[omega_index];
+}
+
+void OmegaWavepacket::copy_weighted_associated_legendres_to_device()
+{
+  if(weighted_associated_legendres_dev) return;
+
+  std::cout << " Copy associated Legendres to device, Omega: " << omega << std::endl;
+  
+  const int &n_theta = MatlabData::theta()->n;
+  const int &l_max = MatlabData::wavepacket_parameters()->l_max;
+  const int &omega_min = MatlabData::wavepacket_parameters()->omega_min;
+  
+  const int n_ass_Legs = l_max - omega + 1;
+  
+  const int omega_index = omega - omega_min;
+  
+  const Vec<RMat> &Legendres = MatlabData::wavepacket_parameters()->weighted_associated_legendres;
+  const RMat &ass_Leg = Legendres[omega_index];
+  
+  insist(ass_Leg.rows() == n_theta && ass_Leg.columns() == n_ass_Legs);
+
+  checkCudaErrors(cudaMalloc(&weighted_associated_legendres_dev, n_theta*n_ass_Legs*sizeof(double)));
+  insist(weighted_associated_legendres_dev);
+  
+  checkCudaErrors(cudaMemcpyAsync(weighted_associated_legendres_dev, ass_Leg,
+				  n_theta*n_ass_Legs*sizeof(double), cudaMemcpyHostToDevice));
 }

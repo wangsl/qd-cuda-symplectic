@@ -45,11 +45,19 @@ void WavepacketsOnSingleDevice::setup_data_on_device()
   setup_cufft_plans();
   
   setup_potential_on_device();
+  setup_omega_wavepackets();
 }
 
 void WavepacketsOnSingleDevice::destroy_data_on_device()
 { 
   setup_device();
+  
+  std::cout << " Destroy data on device: " << device_index() << std::endl;
+
+  for(int i = 0; i < omega_wavepackets.size(); i++) {
+    if(omega_wavepackets[i]) { delete omega_wavepackets[i]; omega_wavepackets[i] = 0; }
+  }
+  omega_wavepackets.resize(0);
 
   _CUDA_FREE_(potential_dev);
   
@@ -81,7 +89,7 @@ void WavepacketsOnSingleDevice::setup_cublas_handle()
 {
   if(_has_created_cublas_handle) return;
 
-  std::cout << " Setup CUBLAS handle on device: " << current_device_index()  << std::endl;
+  std::cout << " Setup cuBLAS handle on device: " << current_device_index()  << std::endl;
   
   insist(cublasCreate(&cublas_handle) == CUBLAS_STATUS_SUCCESS);
   
@@ -92,7 +100,7 @@ void WavepacketsOnSingleDevice::destroy_cublas_handle()
 { 
   if(!_has_created_cublas_handle) return;
   
-  std::cout << " Destroy CUBLAS handle on device: " << current_device_index()  << std::endl;
+  std::cout << " Destroy cuBLAS handle on device: " << current_device_index()  << std::endl;
 
   insist(cublasDestroy(cublas_handle) == CUBLAS_STATUS_SUCCESS);
 
@@ -103,7 +111,7 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
 {
   if(_has_cufft_plans) return;
 
-  std::cout << " Setup CUFFT handles on device: " << current_device_index()  << std::endl;
+  std::cout << " Setup cuFFT handles on device: " << current_device_index()  << std::endl;
 
   const int n1 = MatlabData::r1()->n;
   const int n2 = MatlabData::r2()->n;
@@ -132,10 +140,24 @@ void WavepacketsOnSingleDevice::destroy_cufft_plans()
 { 
   if(!_has_cufft_plans) return;
 
-  std::cout << " Destroy CUFFT handles on device: " << current_device_index()  << std::endl;
+  std::cout << " Destroy cuFFT handles on device: " << current_device_index()  << std::endl;
 
   insist(cufftDestroy(cufft_plan_D2Z) == CUFFT_SUCCESS);
   insist(cufftDestroy(cufft_plan_Z2D) == CUFFT_SUCCESS);
 
   _has_cufft_plans = 0;
+}
+
+void WavepacketsOnSingleDevice::setup_omega_wavepackets()
+{
+  insist(omega_wavepackets.size() == 0);
+
+  omega_wavepackets.resize(n_omegas, 0);
+  
+  for(int i = 0; i < n_omegas; i++) {
+    omega_wavepackets[i] = new OmegaWavepacket(i+omega_start, potential_dev,
+					       cublas_handle,
+					       cufft_plan_D2Z, cufft_plan_Z2D);
+    insist(omega_wavepackets[i]);
+  }
 }

@@ -5,6 +5,9 @@
 #include <cublas_v2.h>
 #include <cufft.h>
 
+#include "omegawavepacket.h"
+#include "vecbase.h"
+
 class WavepacketsOnSingleDevice
 {
 public:
@@ -15,6 +18,8 @@ public:
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
 private:
+
+  Vec<OmegaWavepacket *> omega_wavepackets;
 
   int _device_index;
   int omega_start;
@@ -43,6 +48,7 @@ private:
   void destroy_cufft_plans();
 
   void setup_potential_on_device();
+  void setup_omega_wavepackets();
 };
 
 #endif /* WAVEPACKETS_ON_SINGLE_DEVICE */

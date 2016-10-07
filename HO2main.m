@@ -67,7 +67,7 @@ fprintf(' Dviding surface: %.8f\n', r2Div);
 
 % theta
 
-theta.n = int32(244);
+theta.n = int32(212);
 [ theta.x, theta.w ] = GaussLegendreGrids(theta.n);
 
 %theta.legendre = LegendreP2(double(theta.m), theta.x);
@@ -103,7 +103,7 @@ wavepacket_parameters.OmegaMax = int32(OmegaMax);
 
 P = AssociatedLegendreP(OmegaMin, OmegaMax, lMax, theta.x);
 for k = 1 : theta.n
-  P(k, :, :) = P(k, :, :)*sqrt(theta.w(k));
+  P(k,:,:) = P(k,:,:)*sqrt(theta.w(k));
 end
 
 wavepacket_parameters.weighted_associated_legendres = P;
@@ -144,6 +144,9 @@ HO2Data.options = options;
 %HO2Data.CRP = CRP;
 
 HO2Data.wavepacket_parameters = wavepacket_parameters;
+
+%clearvars -except HO2Data
+%whos
 
 % time evolution
 

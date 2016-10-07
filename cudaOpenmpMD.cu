@@ -91,11 +91,9 @@ void CUDAOpenmpMD::setup_wavepackets_on_single_device()
     checkCudaErrors(cudaSetDevice(i_dev));
     
     const int n_omegas = omegas[i_dev];
-
-    // std::cout << " " << i_dev << " " << omega_start << " " << n_omegas << std::endl;
     
     wavepackets_on_single_device[i_dev] = 
-      new WavepacketsOnSingleDevice(i_dev, omega_start, n_omegas);
+      new WavepacketsOnSingleDevice(i_dev, omega_start+omega_min, n_omegas);
     
     insist(wavepackets_on_single_device[i_dev]);
 
