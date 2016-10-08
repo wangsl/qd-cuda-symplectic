@@ -18,6 +18,7 @@ public:
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
   void test();
+  void test_2();
 
 private:
 

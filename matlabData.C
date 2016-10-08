@@ -15,28 +15,28 @@ void MatlabData::r1(const RadialCoordinate *r) { insist(r && !_r1); _r1 = r; }
 
 // r2
 const RadialCoordinate *MatlabData::r2() { return _r2; }
-void MatlabData::r2(const RadialCoordinate *r) { insist(r); _r2 = r; }
+void MatlabData::r2(const RadialCoordinate *r) { insist(r && !_r2); _r2 = r; }
 
 // theta
 const AngleCoordinate *MatlabData::theta() { return _theta; }
-void MatlabData::theta(const AngleCoordinate *th) { insist(th); _theta = th; }
+void MatlabData::theta(const AngleCoordinate *th) { insist(th && !_theta); _theta = th; }
 
 // potential
 const double *MatlabData::potential() { return _potential; }
-void MatlabData::potential(const double *p) { insist(p); _potential = p; }
+void MatlabData::potential(const double *p) { insist(p && !_potential); _potential = p; }
 
 // evolution time
 EvolutionTime *MatlabData::time() { return _time; }
-void MatlabData::time(EvolutionTime *t) { insist(t); _time = t; }
+void MatlabData::time(EvolutionTime *t) { insist(t && !_time); _time = t; }
 
 // options
 const Options *MatlabData::options() { return _options; }
-void MatlabData::options(const Options *o) { insist(!_options); _options = o; }
+void MatlabData::options(const Options *opt) { insist(opt && !_options); _options = opt; }
 
 // wavepacket parameters
 WavepacketParameters *MatlabData::wavepacket_parameters() { return _wavepacket_parameters; }
 void MatlabData::wavepacket_parameters(WavepacketParameters *params) 
-{ insist(!_wavepacket_parameters); _wavepacket_parameters = params; }
+{ insist(params && !_wavepacket_parameters); _wavepacket_parameters = params; }
 
 // destroy all data 
 
@@ -52,6 +52,7 @@ void MatlabData::destroy_all_data()
   _FREE_(_time);
   _FREE_(_options);
   _FREE_(_wavepacket_parameters);
+  _potential = 0;
 }
 
 #ifdef _FREE_

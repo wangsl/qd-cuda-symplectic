@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <helper_cuda.h>
+#include <omp.h>
 
 #include "cudaOpenmpMD.h"
 #include "cudaUtils.h"
@@ -120,7 +121,11 @@ void CUDAOpenmpMD::destroy_wavepackets_on_single_device()
 
 void CUDAOpenmpMD::test()
 {
-  std::cout << " sizeof RadialCoordinate: " << sizeof(EvolutionUtils::RadialCoordinate) << std::endl; 
+  omp_set_num_threads(n_devices());
+#pragma omp parallel for default(shared)
+  for(int i_dev = 0; i_dev < n_devices(); i_dev++)
+    wavepackets_on_single_device[i_dev]->test_2();
+  
   for(int i_dev = 0; i_dev < n_devices(); i_dev++)
     wavepackets_on_single_device[i_dev]->test();
 }

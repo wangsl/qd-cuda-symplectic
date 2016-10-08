@@ -19,6 +19,7 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
   cufft_plan_D2Z(cufft_plan_D2Z_),
   cufft_plan_Z2D(cufft_plan_Z2D_),
   weighted_psi_real(0), weighted_psi_imag(0), 
+  weighted_psi_dev(0),
   weighted_psi_real_dev(0), weighted_psi_imag_dev(0),
   weighted_associated_legendres_dev(0)
 { 
@@ -34,6 +35,8 @@ OmegaWavepacket::~OmegaWavepacket()
 
   weighted_psi_real = 0;
   weighted_psi_imag = 0;
+
+  weighted_psi_dev = 0;
 
   _CUDA_FREE_(weighted_psi_real_dev);
   _CUDA_FREE_(weighted_psi_imag_dev);
@@ -124,4 +127,38 @@ void OmegaWavepacket::copy_weighted_associated_legendres_to_device()
   
   checkCudaErrors(cudaMemcpyAsync(weighted_associated_legendres_dev, ass_Leg,
 				  n_theta*n_ass_Legs*sizeof(double), cudaMemcpyHostToDevice));
+}
+
+void OmegaWavepacket::_calculate_wavepacket_module()
+{
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+  
+  const double &dr1 = MatlabData::r1()->dr;
+  const double &dr2 = MatlabData::r2()->dr;
+  
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+  
+  double s = 0.0;
+  insist(cublasDdot(cublas_handle, n1*n2*n_theta, 
+		    weighted_psi_dev, 1,
+		    weighted_psi_dev, 1,
+		    &s) == CUBLAS_STATUS_SUCCESS);
+
+  s *= dr1*dr2;
+  
+  if(weighted_psi_dev == weighted_psi_real_dev)
+    _wavepacket_module_real = s;
+  else if(weighted_psi_dev == weighted_psi_imag_dev)
+    _wavepacket_module_imag = s;
+}
+
+void OmegaWavepacket::calculate_wavepacket_module()
+{
+  weighted_psi_dev = weighted_psi_real_dev;
+  _calculate_wavepacket_module();
+  
+  weighted_psi_dev = weighted_psi_imag_dev;
+  _calculate_wavepacket_module();
 }

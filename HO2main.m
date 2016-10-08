@@ -12,6 +12,8 @@ jRot = 4;
 nVib = 0;
 %end
 
+%setenv('OMP_NUM_THREADS', '16');
+
 global H2eV 
 global HO2Data
 
@@ -116,6 +118,8 @@ end
 for k = 1 : theta.n
   wavepackets(:,:,k,:) = wavepackets(:,:,k,:)*sqrt(theta.w(k));
 end
+
+sum(sum(sum(conj(wavepackets).*wavepackets)))*r1.dr*r2.dr
 
 wavepacket_parameters.weighted_wavepackets = wavepackets;
 

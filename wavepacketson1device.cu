@@ -178,10 +178,17 @@ void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
   EvolutionUtils::copy_radial_coordinate_to_device(r2_dev, MatlabData::r2());
 }
 
-void WavepacketsOnSingleDevice::test()
+void WavepacketsOnSingleDevice::test_2()
 {
   setup_device();
+  for(int i = 0; i < n_omegas; i++) {
+    omega_wavepackets[i]->calculate_wavepacket_module();
+  }
+}
+
+void WavepacketsOnSingleDevice::test()
+{
   std::cout << " Test on device: " << current_device_index() << std::endl;
-  _print_constant_memory<<<1, 1>>>();
-  checkCudaErrors(cudaDeviceSynchronize());
+  for(int i = 0; i < n_omegas; i++)
+    std::cout << omega_wavepackets[i]->wavepacket_module() << std::endl;
 }

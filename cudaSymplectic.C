@@ -1,8 +1,10 @@
 
 #include <iostream>
 #include <mex.h>
-#include "matlabUtils.h"
+#include <omp.h>
+#include <unistd.h>
 
+#include "matlabUtils.h"
 #include "matlabArray.h"
 #include "matlabStructures.h"
 #include "matlabData.h"
@@ -56,6 +58,11 @@ void mexFunction(int nlhs, mxArray *plhs[],
   if(evolCUDA) { delete evolCUDA; evolCUDA = 0; }
 
   MatlabData::destroy_all_data();
+
+  int n_cpu_cores = sysconf(_SC_NPROCESSORS_ONLN);
+  //const char *omp_threads = std::getenv("OMP_NUM_THREADS");
+  //if(omp_threads) n_cpu_cores = atoi(omp_threads);
+  omp_set_num_threads(n_cpu_cores);
 
   std::cout.flush();
   std::cout.precision(np);
