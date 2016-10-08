@@ -20,7 +20,11 @@ public:
 
   void calculate_wavepacket_module();
 
-  double wavepacket_module() const { return _wavepacket_module_real + _wavepacket_module_imag; }
+  double wavepacket_module() const 
+  { return _wavepacket_module_from_real + _wavepacket_module_from_imag; }
+
+  double kinetic_energy() const
+  { return _kinetic_energy_from_real + _kinetic_energy_from_imag; }
   
 private:
 
@@ -41,8 +45,11 @@ private:
   cufftHandle &cufft_plan_D2Z;
   cufftHandle &cufft_plan_Z2D;
 
-  double _wavepacket_module_real;
-  double _wavepacket_module_imag;
+  double _wavepacket_module_from_real;
+  double _wavepacket_module_from_imag;
+  
+  double _kinetic_energy_from_real;
+  double _kinetic_energy_from_imag;
 
   void setup_weighted_psi();
   void copy_weighted_psi_from_host_to_device();

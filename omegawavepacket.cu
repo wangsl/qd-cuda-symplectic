@@ -149,9 +149,9 @@ void OmegaWavepacket::_calculate_wavepacket_module()
   s *= dr1*dr2;
   
   if(weighted_psi_dev == weighted_psi_real_dev)
-    _wavepacket_module_real = s;
+    _wavepacket_module_from_real = s;
   else if(weighted_psi_dev == weighted_psi_imag_dev)
-    _wavepacket_module_imag = s;
+    _wavepacket_module_from_imag = s;
 }
 
 void OmegaWavepacket::calculate_wavepacket_module()
