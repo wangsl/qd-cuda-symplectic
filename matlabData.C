@@ -11,7 +11,7 @@ static WavepacketParameters *_wavepacket_parameters = 0;
 
 // r1
 const RadialCoordinate *MatlabData::r1() { return _r1; }
-void MatlabData::r1(const RadialCoordinate *r) { insist(r); _r1 = r; }
+void MatlabData::r1(const RadialCoordinate *r) { insist(r && !_r1); _r1 = r; }
 
 // r2
 const RadialCoordinate *MatlabData::r2() { return _r2; }
@@ -23,11 +23,11 @@ void MatlabData::theta(const AngleCoordinate *th) { insist(th); _theta = th; }
 
 // potential
 const double *MatlabData::potential() { return _potential; }
-void MatlabData::potential(const double *p) { insist(!_potential); _potential = p; }
+void MatlabData::potential(const double *p) { insist(p); _potential = p; }
 
 // evolution time
 EvolutionTime *MatlabData::time() { return _time; }
-void MatlabData::time(EvolutionTime *t) { insist(!_time); _time = t; }
+void MatlabData::time(EvolutionTime *t) { insist(t); _time = t; }
 
 // options
 const Options *MatlabData::options() { return _options; }
@@ -38,3 +38,22 @@ WavepacketParameters *MatlabData::wavepacket_parameters() { return _wavepacket_p
 void MatlabData::wavepacket_parameters(WavepacketParameters *params) 
 { insist(!_wavepacket_parameters); _wavepacket_parameters = params; }
 
+// destroy all data 
+
+#define _FREE_(x) if(x) { delete x; x = 0; }
+
+void MatlabData::destroy_all_data()
+{
+  std::cout << " Destroy Matlab data" << std::endl;
+  
+  _FREE_(_r1);
+  _FREE_(_r2);
+  _FREE_(_theta);
+  _FREE_(_time);
+  _FREE_(_options);
+  _FREE_(_wavepacket_parameters);
+}
+
+#ifdef _FREE_
+#undef _FREE_
+#endif

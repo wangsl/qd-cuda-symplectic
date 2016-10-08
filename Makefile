@@ -13,7 +13,7 @@ CC = icc
 CXX = icpc
 NVCC = nvcc
 
-CFLAGS = -DI64
+CFLAGS = #-DI64
 
 FFLAGS = -132
 

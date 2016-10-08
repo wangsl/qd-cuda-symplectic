@@ -22,9 +22,11 @@ public:
   RVec dump;
   
   RadialCoordinate(const mxArray *mx);
+
   ~RadialCoordinate() { if(mx) mx = 0; }
   
 private:
+
   const mxArray *mx;
   
   // to prevent assigment and copy operation
@@ -45,9 +47,11 @@ public:
   RVec w; // out
   
   AngleCoordinate(const mxArray *mx);
+
   ~AngleCoordinate() { if(mx) mx = 0; }
   
 private:
+
   const mxArray *mx;
   
   // to prevent assigment and copy operation
@@ -68,9 +72,11 @@ public:
   int &steps; // out
   
   EvolutionTime(const mxArray *mx);
+  
   ~EvolutionTime() { if(mx) mx = 0; }
   
 private:
+  
   const mxArray *mx;
 
   EvolutionTime(const EvolutionTime &);
@@ -107,7 +113,8 @@ class WavepacketParameters
 public:
 
   WavepacketParameters(const mxArray *mx);
-  ~WavepacketParameters();
+
+  ~WavepacketParameters() { if(mx) mx = 0; }  
 
   const int &J; // out
   const int &parity; // out
@@ -122,6 +129,7 @@ public:
   int legendre_wavepackets_size() { return l_max - omega_min + 1; }
 
 private:
+
   const mxArray *mx;
 
   void setup_weighted_associated_legendres();

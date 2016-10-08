@@ -7,8 +7,7 @@
 
 void remove_matlab_script_extension(char *script, const char *extension)
 {
-  insist(script);
-  insist(extension);
+  insist(script && extension);
   const int len = strlen(script) - strlen(extension);
   if(!strcmp((const char *) script+len, extension)) 
     ((char *) script)[len] = '\0';
@@ -85,9 +84,6 @@ WavepacketParameters::WavepacketParameters(const mxArray *mx) :
   setup_weighted_associated_legendres();
 }
   
-WavepacketParameters::~WavepacketParameters() 
-{ if(mx) mx = 0; }  
-
 void WavepacketParameters::setup_weighted_associated_legendres()
 { 
   const mxArray *ass_legs_ptr = mxGetField(mx, 0, "weighted_associated_legendres");
@@ -104,7 +100,10 @@ void WavepacketParameters::setup_weighted_associated_legendres()
   const int n2 = dims[1];
   const int n3 = ass_legs.n_dims() == 3 ? dims[2] : 1;
 
-  if(MatlabData::theta()) insist(n1 == MatlabData::theta()->n);
+  if(MatlabData::theta()) {
+    insist(n1 == MatlabData::theta()->n);
+    insist(MatlabData::theta()->n > l_max+1);
+  }
   
   if(omega_min == 0) 
     insist(n2 == l_max+1 && n3 == omega_max+1);

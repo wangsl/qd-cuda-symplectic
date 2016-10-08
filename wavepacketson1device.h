@@ -17,6 +17,8 @@ public:
 
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
+  void test();
+
 private:
 
   Vec<OmegaWavepacket *> omega_wavepackets;
@@ -40,6 +42,8 @@ private:
 
   void setup_data_on_device();
   void destroy_data_on_device();
+
+  void setup_constant_memory_on_device();
 
   void setup_cublas_handle();
   void destroy_cublas_handle();

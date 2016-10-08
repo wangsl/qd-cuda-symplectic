@@ -95,94 +95,94 @@ public:
   RVec & multiply(const RMat &, const RVec &);
   RVec & symmetric_multiply(const RMat &, const RVec &);
   RVec & operator +=(const RVec &t)
-    { return add((const RVec &) *this, t); }
+  { return add((const RVec &) *this, t); }
   RVec & operator -=(const RVec &t)
-    { return subtract((const RVec &) *this, t); }
+  { return subtract((const RVec &) *this, t); }
   RVec & operator *=(double r)
-    { return multiply(r, (const RVec &) *this); }
+  { return multiply(r, (const RVec &) *this); }
   RVec & operator /=(double r)
-    { return multiply(1.0/r, (const RVec &) *this); }
+  { return multiply(1.0/r, (const RVec &) *this); }
   RVec operator -() const
-    { 
-      RVec v(size());
-      return v.multiply(-1.0, *this);
-    }
+  { 
+    RVec v(size());
+    return v.multiply(-1.0, *this);
+  }
   RVec & copy(const RVec &vec)
-    {
-      assert(is_conformable_with(vec));
-      memcpy((double *) *this, (const double *) vec, size()*sizeof(double));
-      return *this;
-    }
+  {
+    assert(is_conformable_with(vec));
+    memcpy((double *) *this, (const double *) vec, size()*sizeof(double));
+    return *this;
+  }
   RVec & copy(const double *vec)
-    { 
-      memcpy((double *) *this, vec, size()*sizeof(double));
-      return *this;
-    }
+  { 
+    memcpy((double *) *this, vec, size()*sizeof(double));
+    return *this;
+  }
   const RVec & copy_to(double *vec) const
-    { 
-      memcpy(vec, (const double *) *this, size()*sizeof(double));
-      return *this;
-    }
+  { 
+    memcpy(vec, (const double *) *this, size()*sizeof(double));
+    return *this;
+  }
   RVec & copy(const RVec &vec, int start, int end)
-    {
-      assert(size() >= end - start + 1);
-      assert(0 <= start && start < vec.size());
-      assert(0 <= end && end < vec.size());
-      memcpy(*this, &vec[start], (end - start + 1) * sizeof(double));
-      return *this;
-    }
+  {
+    assert(size() >= end - start + 1);
+    assert(0 <= start && start < vec.size());
+    assert(0 <= end && end < vec.size());
+    memcpy(*this, &vec[start], (end - start + 1) * sizeof(double));
+    return *this;
+  }
   RVec copy() const
-    {
-      RVec r(size());
-      r.copy(*this);
-      return r;
-    }
+  {
+    RVec r(size());
+    r.copy(*this);
+    return r;
+  }
   /*
-  void zero()
+    void zero()
     { memset(*this, 0, size()*sizeof(double)); }
   */
-
-  void garbage()
-    { memset(*this, 0xFF, size()*sizeof(double)); }
+  
+  void garbage() { memset(*this, 0xFF, size()*sizeof(double)); }
+  
   double sum() const
-    {
-      double s = 0.0;
-      for (int i = 0; i < size(); i++)
-	s += (*this)[i];
-      return s;
-    }
-  void show_self();
-  double sq() const
-    {
-      double c;
-      FORT(rvvmult)(&c, *this, *this, size());
-      return c;
-    }
-  double minimum() const
-    {
-      if (size() == 0)
-	return 0;
-      double m = (*this)[0];
-      for (int i = 1; i < size(); i++)
-	if ((*this)[i] < m)
-	  m = (*this)[i];
-      return m;
-    }
-  double maximum() const
-    {
-      if (size() == 0)
-	return 0;
-      double m = (*this)[0];
-      for (int i = 1; i < size(); i++)
-	if ((*this)[i] > m)
-	  m = (*this)[i];
-      return m;
-    }
-
-  void append(const double c) 
   {
-    Vec<double>::add(c);
+    double s = 0.0;
+    for (int i = 0; i < size(); i++)
+      s += (*this)[i];
+    return s;
   }
+  
+  void show_self();
+  
+  double sq() const
+  {
+    double c;
+    FORT(rvvmult)(&c, *this, *this, size());
+    return c;
+  }
+  
+  double minimum() const
+  {
+    if(size() == 0) return 0;
+    double m = (*this)[0];
+    for (int i = 1; i < size(); i++)
+      if ((*this)[i] < m)
+	m = (*this)[i];
+    return m;
+  }
+  
+  double maximum() const
+  {
+    if (size() == 0) return 0;
+    double m = (*this)[0];
+    for (int i = 1; i < size(); i++)
+      if ((*this)[i] > m)
+	m = (*this)[i];
+    return m;
+  }
+  
+  void append(const double c) 
+  { Vec<double>::add(c); }
   
 };
 

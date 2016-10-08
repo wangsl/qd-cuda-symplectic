@@ -7,6 +7,8 @@
 #include "matlabUtils.h"
 #include "matlabData.h"
 
+#include "evolutionUtils.h"
+
 inline static void divide_into_chunks(const int n, const int m, int *chunks)
 {
   for(int i = 0; i < m; i++) chunks[i] = n/m;
@@ -117,5 +119,9 @@ void CUDAOpenmpMD::destroy_wavepackets_on_single_device()
 }
 
 void CUDAOpenmpMD::test()
-{ }
+{
+  std::cout << " sizeof RadialCoordinate: " << sizeof(EvolutionUtils::RadialCoordinate) << std::endl; 
+  for(int i_dev = 0; i_dev < n_devices(); i_dev++)
+    wavepackets_on_single_device[i_dev]->test();
+}
 

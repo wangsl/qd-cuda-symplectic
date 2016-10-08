@@ -33,6 +33,8 @@ namespace MatlabData
   OmegaStates *omega_states();
   void omega_states(OmegaStates *om);
 #endif
+
+  void destroy_all_data();
 };
 
 #endif /* MATLAB_DATA_H */

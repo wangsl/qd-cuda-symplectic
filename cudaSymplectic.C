@@ -16,6 +16,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
   std::cout << "\n Quantum Dynamics Time Evolution with CUDA\n" << std::endl;
 
+  std::cout << " Setup Matlab data for C++/CUDA" << std::endl;
+
   insist(nrhs == 1);
 
   mxArray *mxPtr = 0;
@@ -48,9 +50,13 @@ void mexFunction(int nlhs, mxArray *plhs[],
   insist(mxPtr);
   MatlabData::wavepacket_parameters(new WavepacketParameters(mxPtr));
 
-  CUDAOpenmpMD evolCUDA;
-  evolCUDA.test();
-  
+  CUDAOpenmpMD *evolCUDA = new CUDAOpenmpMD();
+  insist(evolCUDA);
+  evolCUDA->test();
+  if(evolCUDA) { delete evolCUDA; evolCUDA = 0; }
+
+  MatlabData::destroy_all_data();
+
   std::cout.flush();
   std::cout.precision(np);
 }

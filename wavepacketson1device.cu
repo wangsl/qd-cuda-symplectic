@@ -6,6 +6,12 @@
 #include "cudaUtils.h"
 #include "matlabUtils.h"
 #include "matlabData.h"
+#include "evolutionUtils.h"
+
+#include "evolutionAux.cu"
+
+__constant__ EvolutionUtils::RadialCoordinate r1_dev;
+__constant__ EvolutionUtils::RadialCoordinate r2_dev;
 
 WavepacketsOnSingleDevice::
 WavepacketsOnSingleDevice(const int device_index_,
@@ -41,6 +47,8 @@ void WavepacketsOnSingleDevice::setup_data_on_device()
 
   std::cout << " Setup data on device: " << device_index() << std::endl;
 
+  setup_constant_memory_on_device();
+
   setup_cublas_handle();
   setup_cufft_plans();
   
@@ -69,7 +77,7 @@ void WavepacketsOnSingleDevice::setup_potential_on_device()
 {
   if(potential_dev) return;
 
-  std::cout << " Allocate and copy potential on device: " << current_device_index()  << std::endl;
+  std::cout << " Allocate and copy potential on device: " << current_device_index() << std::endl;
   
   const double *potential = MatlabData::potential();
   insist(potential);
@@ -89,7 +97,7 @@ void WavepacketsOnSingleDevice::setup_cublas_handle()
 {
   if(_has_created_cublas_handle) return;
 
-  std::cout << " Setup cuBLAS handle on device: " << current_device_index()  << std::endl;
+  std::cout << " Setup cuBLAS handle on device: " << current_device_index() << std::endl;
   
   insist(cublasCreate(&cublas_handle) == CUBLAS_STATUS_SUCCESS);
   
@@ -100,7 +108,7 @@ void WavepacketsOnSingleDevice::destroy_cublas_handle()
 { 
   if(!_has_created_cublas_handle) return;
   
-  std::cout << " Destroy cuBLAS handle on device: " << current_device_index()  << std::endl;
+  std::cout << " Destroy cuBLAS handle on device: " << current_device_index() << std::endl;
 
   insist(cublasDestroy(cublas_handle) == CUBLAS_STATUS_SUCCESS);
 
@@ -111,7 +119,7 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
 {
   if(_has_cufft_plans) return;
 
-  std::cout << " Setup cuFFT handles on device: " << current_device_index()  << std::endl;
+  std::cout << " Setup cuFFT handles on device: " << current_device_index() << std::endl;
 
   const int n1 = MatlabData::r1()->n;
   const int n2 = MatlabData::r2()->n;
@@ -140,7 +148,7 @@ void WavepacketsOnSingleDevice::destroy_cufft_plans()
 { 
   if(!_has_cufft_plans) return;
 
-  std::cout << " Destroy cuFFT handles on device: " << current_device_index()  << std::endl;
+  std::cout << " Destroy cuFFT handles on device: " << current_device_index() << std::endl;
 
   insist(cufftDestroy(cufft_plan_D2Z) == CUFFT_SUCCESS);
   insist(cufftDestroy(cufft_plan_Z2D) == CUFFT_SUCCESS);
@@ -160,4 +168,20 @@ void WavepacketsOnSingleDevice::setup_omega_wavepackets()
 					       cufft_plan_D2Z, cufft_plan_Z2D);
     insist(omega_wavepackets[i]);
   }
+}
+
+void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
+{
+  std::cout << " Setup constant memory on device: " << current_device_index() << std::endl;
+
+  EvolutionUtils::copy_radial_coordinate_to_device(r1_dev, MatlabData::r1());
+  EvolutionUtils::copy_radial_coordinate_to_device(r2_dev, MatlabData::r2());
+}
+
+void WavepacketsOnSingleDevice::test()
+{
+  setup_device();
+  std::cout << " Test on device: " << current_device_index() << std::endl;
+  _print_constant_memory<<<1, 1>>>();
+  checkCudaErrors(cudaDeviceSynchronize());
 }
