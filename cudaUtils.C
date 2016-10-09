@@ -10,7 +10,7 @@
 #include "cudaUtils.h"
 #include "matlabUtils.h"
 
-void cudaUtils::gpu_memory_usage()
+void cudaUtils::device_memory_usage()
 {
   std::ios_base::fmtflags old_flags = std::cout.flags();
   std::streamsize old_precision = std::cout.precision();

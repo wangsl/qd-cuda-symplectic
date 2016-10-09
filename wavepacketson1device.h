@@ -18,7 +18,7 @@ public:
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
   void test();
-  void test_2();
+  void test_parallel();
 
 private:
 
@@ -29,6 +29,10 @@ private:
   int n_omegas;
 
   double *potential_dev;
+
+  double *cufft_work_dev;
+  double *omega_wavepacket_from_left_device;
+  double *omega_wavepacket_from_right_device;
 
   cublasHandle_t cublas_handle;
   int _has_created_cublas_handle;
@@ -54,6 +58,8 @@ private:
 
   void setup_potential_on_device();
   void setup_omega_wavepackets();
+
+  void setup_work_spaces_on_device();
 };
 
 #endif /* WAVEPACKETS_ON_SINGLE_DEVICE */

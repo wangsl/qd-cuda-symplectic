@@ -13,8 +13,15 @@ namespace cudaUtils {
   
   inline int number_of_blocks(const int n_threads, const int n)
   { return n/n_threads*n_threads == n ? n/n_threads : n/n_threads+1; }
+
+  inline int n_devices()
+  {
+    int _n_devices = -1;
+    checkCudaErrors(cudaGetDeviceCount(&_n_devices));
+    return _n_devices;
+  }
   
-  void gpu_memory_usage();
+  void device_memory_usage();
 
   void cufft_work_size(const cufftHandle &plan, const char *type = 0);
 }
@@ -30,3 +37,5 @@ inline char *time_now()
 }
 
 #endif /* CUDA_UTILS_H */
+  
+

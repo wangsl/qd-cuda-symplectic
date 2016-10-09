@@ -21,6 +21,9 @@ WavepacketsOnSingleDevice(const int device_index_,
   omega_start(omega_start_),
   n_omegas(n_omegas_),
   potential_dev(0),
+  cufft_work_dev(0),
+  omega_wavepacket_from_left_device(0),
+  omega_wavepacket_from_right_device(0),
   _has_created_cublas_handle(0),
   _has_cufft_plans(0)
 { 
@@ -51,6 +54,8 @@ void WavepacketsOnSingleDevice::setup_data_on_device()
 
   setup_cublas_handle();
   setup_cufft_plans();
+
+  setup_work_spaces_on_device();
   
   setup_potential_on_device();
   setup_omega_wavepackets();
@@ -68,6 +73,9 @@ void WavepacketsOnSingleDevice::destroy_data_on_device()
   omega_wavepackets.resize(0);
 
   _CUDA_FREE_(potential_dev);
+  _CUDA_FREE_(cufft_work_dev);
+  _CUDA_FREE_(omega_wavepacket_from_left_device);
+  _CUDA_FREE_(omega_wavepacket_from_right_device);
   
   destroy_cublas_handle();
   destroy_cufft_plans();
@@ -123,24 +131,24 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
 
   const int n1 = MatlabData::r1()->n;
   const int n2 = MatlabData::r2()->n;
-  const int n_ass_Legs = MatlabData::wavepacket_parameters()->l_max + 1;
+  const int n_theta = MatlabData::theta()->n;
   
   const int dims [] = { n2, n1 };
   
   insist(cufftPlanMany(&cufft_plan_D2Z, 2, const_cast<int *>(dims), 
 		       NULL, 1, n1*n2,
 		       NULL, 1, n1*n2,
-		       CUFFT_D2Z, n_ass_Legs) == CUFFT_SUCCESS);
+		       CUFFT_D2Z, n_theta) == CUFFT_SUCCESS);
 
   cudaUtils::cufft_work_size(cufft_plan_D2Z, "D2Z");
   
   insist(cufftPlanMany(&cufft_plan_Z2D, 2, const_cast<int *>(dims), 
 		       NULL, 1, n1*n2,
 		       NULL, 1, n1*n2,
-		       CUFFT_Z2D, n_ass_Legs) == CUFFT_SUCCESS);
+		       CUFFT_Z2D, n_theta) == CUFFT_SUCCESS);
 
   cudaUtils::cufft_work_size(cufft_plan_Z2D, "Z2D");
-
+  
   _has_cufft_plans = 1;
 }
 
@@ -161,11 +169,13 @@ void WavepacketsOnSingleDevice::setup_omega_wavepackets()
   insist(omega_wavepackets.size() == 0);
 
   omega_wavepackets.resize(n_omegas, 0);
+
+  insist(cufft_work_dev);
   
   for(int i = 0; i < n_omegas; i++) {
     omega_wavepackets[i] = new OmegaWavepacket(i+omega_start, potential_dev,
-					       cublas_handle,
-					       cufft_plan_D2Z, cufft_plan_Z2D);
+					       cublas_handle, cufft_plan_D2Z, cufft_plan_Z2D,
+					       cufft_work_dev);
     insist(omega_wavepackets[i]);
   }
 }
@@ -178,11 +188,43 @@ void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
   EvolutionUtils::copy_radial_coordinate_to_device(r2_dev, MatlabData::r2());
 }
 
-void WavepacketsOnSingleDevice::test_2()
+void WavepacketsOnSingleDevice::setup_work_spaces_on_device()
+{
+  if(!cufft_work_dev) {
+    std::cout << " Setup cuFFT work on device: " << current_device_index() << std::endl;
+    const int &n1 = MatlabData::r1()->n;
+    const int &n2 = MatlabData::r2()->n;
+    const int &n_theta = MatlabData::theta()->n;
+    checkCudaErrors(cudaMalloc(&cufft_work_dev, n1*(n2/2+1)*n_theta*2*sizeof(double)));
+    insist(cufft_work_dev);
+  }
+
+  if(device_index() != 0) {
+    if(!omega_wavepacket_from_left_device) {
+      std::cout << " Setup wavepacket from left on device: " << current_device_index() << std::endl;
+      const int &n1 = MatlabData::r1()->n;
+      const int &n2 = MatlabData::r2()->n;
+      const int &n_theta = MatlabData::theta()->n;
+      checkCudaErrors(cudaMalloc(&omega_wavepacket_from_left_device, n1*n2*n_theta*sizeof(double)));
+    }
+  }
+  
+  if(device_index() < cudaUtils::n_devices()-1) {
+    if(!omega_wavepacket_from_right_device) {
+      std::cout << " Setup wavepacket from right on device: " << current_device_index() << std::endl;
+      const int &n1 = MatlabData::r1()->n;
+      const int &n2 = MatlabData::r2()->n;
+      const int &n_theta = MatlabData::theta()->n;
+      checkCudaErrors(cudaMalloc(&omega_wavepacket_from_right_device, n1*n2*n_theta*sizeof(double)));
+    }
+  }
+}
+
+void WavepacketsOnSingleDevice::test_parallel()
 {
   setup_device();
   for(int i = 0; i < n_omegas; i++) {
-    omega_wavepackets[i]->calculate_wavepacket_module();
+    omega_wavepackets[i]->test_parallel();
   }
 }
 

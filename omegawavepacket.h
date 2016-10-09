@@ -13,7 +13,8 @@ public:
 		  const double *potential_dev, 
 		  cublasHandle_t &cublas_handle,
 		  cufftHandle &cufft_plan_D2Z,
-		  cufftHandle &cufft_plan_Z2D
+		  cufftHandle &cufft_plan_Z2D,
+		  double * &cufft_work_dev
 		  );
 
   ~OmegaWavepacket();
@@ -25,10 +26,10 @@ public:
 
   double kinetic_energy() const
   { return _kinetic_energy_from_real + _kinetic_energy_from_imag; }
+
+  void test_parallel();
   
 private:
-
-  double *weighted_psi;
 
   double *weighted_psi_real;
   double *weighted_psi_imag;
@@ -40,6 +41,12 @@ private:
   double *weighted_psi_real_dev;
   double *weighted_psi_imag_dev;
   double *weighted_associated_legendres_dev;
+
+  double *weighted_legendre_psi_dev;
+  double *H_weighted_psi_dev;
+  double *H_weighted_legendre_psi_dev;
+
+  double * &cufft_work_dev;
 
   cublasHandle_t &cublas_handle;
   cufftHandle &cufft_plan_D2Z;
@@ -58,6 +65,13 @@ private:
   void copy_weighted_associated_legendres_to_device();
 
   void _calculate_wavepacket_module();
+
+  void _calculate_kinetic_and_potential_on_weighted_psi();
+
+  void cufft_D2Z_for_weighted_psi();
+  void cufft_Z2D_for_weighted_psi();
+
+  double dot_product_with_volume_element(const double *x_dev, const double *y_dev) const;
 };
 
 #endif /* OMEGA_WAVEPACKET_H */
