@@ -129,10 +129,14 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
 
   std::cout << " Setup cuFFT handles on device: " << current_device_index() << std::endl;
 
-  const int n1 = MatlabData::r1()->n;
-  const int n2 = MatlabData::r2()->n;
-  const int n_theta = MatlabData::theta()->n;
-  
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+
+  /* wavepacket psi is from Matlab, which is column-major format, while cuFFT is using row-major format
+   * so to switch dimensions, after D2Z FFT, the output data is { n2, n1/2+1 }, 
+   * it is still column-major format
+   */
   const int dims [] = { n2, n1 };
   
   insist(cufftPlanMany(&cufft_plan_D2Z, 2, const_cast<int *>(dims), 
@@ -141,7 +145,7 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
 		       CUFFT_D2Z, n_theta) == CUFFT_SUCCESS);
 
   cudaUtils::cufft_work_size(cufft_plan_D2Z, "D2Z");
-  
+
   insist(cufftPlanMany(&cufft_plan_Z2D, 2, const_cast<int *>(dims), 
 		       NULL, 1, n1*n2,
 		       NULL, 1, n1*n2,
@@ -167,7 +171,7 @@ void WavepacketsOnSingleDevice::destroy_cufft_plans()
 void WavepacketsOnSingleDevice::setup_omega_wavepackets()
 {
   insist(omega_wavepackets.size() == 0);
-
+  
   omega_wavepackets.resize(n_omegas, 0);
 
   insist(cufft_work_dev);
@@ -190,12 +194,14 @@ void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
 
 void WavepacketsOnSingleDevice::setup_work_spaces_on_device()
 {
+  setup_device();
+  
   if(!cufft_work_dev) {
     std::cout << " Setup cuFFT work on device: " << current_device_index() << std::endl;
     const int &n1 = MatlabData::r1()->n;
     const int &n2 = MatlabData::r2()->n;
     const int &n_theta = MatlabData::theta()->n;
-    checkCudaErrors(cudaMalloc(&cufft_work_dev, n1*(n2/2+1)*n_theta*2*sizeof(double)));
+    checkCudaErrors(cudaMalloc(&cufft_work_dev, (n1/2+1)*n2*n_theta*2*sizeof(double)));
     insist(cufft_work_dev);
   }
 
@@ -230,7 +236,12 @@ void WavepacketsOnSingleDevice::test_parallel()
 
 void WavepacketsOnSingleDevice::test()
 {
+  setup_device();
   std::cout << " Test on device: " << current_device_index() << std::endl;
   for(int i = 0; i < n_omegas; i++)
-    std::cout << omega_wavepackets[i]->wavepacket_module() << std::endl;
+    std::cout << " " << omega_wavepackets[i]->wavepacket_module() 
+	      << " " << omega_wavepackets[i]->kinetic_energy() 
+	      << " " << omega_wavepackets[i]->potential_energy()
+	      << std::endl;
+
 }

@@ -34,6 +34,7 @@ namespace MatlabData
   void omega_states(OmegaStates *om);
 #endif
 
+  void check_data();
   void destroy_all_data();
 };
 

@@ -39,6 +39,14 @@ WavepacketParameters *MatlabData::wavepacket_parameters() { return _wavepacket_p
 void MatlabData::wavepacket_parameters(WavepacketParameters *params) 
 { insist(params && !_wavepacket_parameters); _wavepacket_parameters = params; }
 
+// check Matlab data
+void MatlabData::check_data()
+{
+  insist(MatlabData::r1()->n%2 == 0);
+  insist(MatlabData::r2()->n%2 == 0);
+  insist(MatlabData::theta()->n > MatlabData::wavepacket_parameters()->l_max);
+}
+
 // destroy all data 
 
 #define _FREE_(x) if(x) { delete x; x = 0; }

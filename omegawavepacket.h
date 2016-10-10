@@ -27,6 +27,9 @@ public:
   double kinetic_energy() const
   { return _kinetic_energy_from_real + _kinetic_energy_from_imag; }
 
+  double potential_energy() const
+  { return _potential_energy_from_real + _potential_energy_from_imag; }
+
   void test_parallel();
   
 private:
@@ -58,6 +61,9 @@ private:
   double _kinetic_energy_from_real;
   double _kinetic_energy_from_imag;
 
+  double _potential_energy_from_real;
+  double _potential_energy_from_imag;
+
   void setup_weighted_psi();
   void copy_weighted_psi_from_host_to_device();
   void copy_weighted_psi_from_device_to_host();
@@ -66,7 +72,8 @@ private:
 
   void _calculate_wavepacket_module();
 
-  void _calculate_kinetic_and_potential_on_weighted_psi();
+  void _calculate_kinetic_on_weighted_psi();
+  void _calculate_potential_on_weighted_psi();
 
   void cufft_D2Z_for_weighted_psi();
   void cufft_Z2D_for_weighted_psi();

@@ -7,6 +7,8 @@
 #include "matlabUtils.h"
 #include "matlabData.h"
 
+#include "evolutionAux.cu"
+
 OmegaWavepacket::OmegaWavepacket(int omega_,
 				 const double *potential_dev_, 
 				 cublasHandle_t &cublas_handle_,
@@ -176,42 +178,73 @@ void OmegaWavepacket::calculate_wavepacket_module()
   _calculate_wavepacket_module();
 }
 
-void OmegaWavepacket::_calculate_kinetic_and_potential_on_weighted_psi()
+void OmegaWavepacket::_calculate_kinetic_on_weighted_psi()
 {
-  if(!H_weighted_psi_dev) {
-    const int &n1 = MatlabData::r1()->n;
-    const int &n2 = MatlabData::r2()->n;
-    const int &n_theta = MatlabData::theta()->n;
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+  
+  if(!H_weighted_psi_dev) 
     checkCudaErrors(cudaMalloc(&H_weighted_psi_dev, n1*n2*n_theta*sizeof(double)));
-  }
+  
   insist(H_weighted_psi_dev);
-
+  
   insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
   insist(cufft_work_dev);
   
   insist(cufftExecD2Z(cufft_plan_D2Z, (cufftDoubleReal *) weighted_psi_dev,
 		      (cufftDoubleComplex *) cufft_work_dev) == CUFFT_SUCCESS);
   
+  const int n_threads = _NTHREADS_;
+  const int n_blocks = cudaUtils::number_of_blocks(n_threads, (n1/2+1)*n2*n_theta);
+  
+  _psi_times_kinetic_energy_<<<n_blocks, n_threads, (n1/2+1+n2)*sizeof(double)>>>
+    ((Complex *) cufft_work_dev, (const Complex *) cufft_work_dev, n1, n2, n_theta);
+  
   insist(cufftExecZ2D(cufft_plan_Z2D, (cufftDoubleComplex *) cufft_work_dev,
-		      (cufftDoubleReal *) weighted_psi_dev) == CUFFT_SUCCESS);
+		      (cufftDoubleReal *) H_weighted_psi_dev) == CUFFT_SUCCESS);
+  
+  const double f = 1.0/(n1*n2);
 
+  insist(cublasDscal(cublas_handle, n1*n2*n_theta, &f, H_weighted_psi_dev, 1) 
+	 == CUBLAS_STATUS_SUCCESS);
+}
+
+void OmegaWavepacket::_calculate_potential_on_weighted_psi()
+{
+  insist(H_weighted_psi_dev);
+  
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
-
-  const double f = 1.0/(n1*n2);
-
-  insist(cublasDscal(cublas_handle, n1*n2*n_theta, &f, weighted_psi_dev, 1) 
-	 == CUBLAS_STATUS_SUCCESS);
+  
+  const int n_threads = _NTHREADS_;
+  const int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_theta);
+  
+  _psi_time_potential_energy_<<<n_blocks, n_threads>>>(H_weighted_psi_dev, weighted_psi_dev, potential_dev,
+						       n1*n2*n_theta);
 }
 
 void OmegaWavepacket::test_parallel()
 {
   weighted_psi_dev = weighted_psi_real_dev;
-  _calculate_kinetic_and_potential_on_weighted_psi();
+  
+  _calculate_kinetic_on_weighted_psi();
+  _kinetic_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
+
+  _calculate_potential_on_weighted_psi();
+  _potential_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
+  _potential_energy_from_real -= _kinetic_energy_from_real;
+  
   
   weighted_psi_dev = weighted_psi_imag_dev;
-  _calculate_kinetic_and_potential_on_weighted_psi();
+
+  _calculate_kinetic_on_weighted_psi();
+  _kinetic_energy_from_imag = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
+  
+  _calculate_potential_on_weighted_psi();
+  _potential_energy_from_imag = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
+  _potential_energy_from_imag -= _kinetic_energy_from_imag;
   
   calculate_wavepacket_module();
 }

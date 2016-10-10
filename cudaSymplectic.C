@@ -52,6 +52,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
   insist(mxPtr);
   MatlabData::wavepacket_parameters(new WavepacketParameters(mxPtr));
 
+  MatlabData::check_data();
+
   CUDAOpenmpMD *evolCUDA = new CUDAOpenmpMD();
   insist(evolCUDA);
   evolCUDA->test();
@@ -60,8 +62,6 @@ void mexFunction(int nlhs, mxArray *plhs[],
   MatlabData::destroy_all_data();
 
   int n_cpu_cores = sysconf(_SC_NPROCESSORS_ONLN);
-  //const char *omp_threads = std::getenv("OMP_NUM_THREADS");
-  //if(omp_threads) n_cpu_cores = atoi(omp_threads);
   omp_set_num_threads(n_cpu_cores);
 
   std::cout.flush();

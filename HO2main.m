@@ -8,8 +8,8 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 4;
-nVib = 0;
+jRot = 5;
+nVib = 1;
 %end
 
 %setenv('OMP_NUM_THREADS', '16');
@@ -30,13 +30,13 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(500);
+time.total_steps = int32(10000);
 time.time_step = 1;
 time.steps = int32(0);
 
 % r1: R
 
-r1.n = int32(512);
+r1.n = int32(768);
 r1.r = linspace(1.5, 16.0, r1.n);
 r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
@@ -48,12 +48,12 @@ r1.r0 = 10.0;
 r1.k0 = 0.25;
 r1.delta = 0.06;
 
-eGT = 1/(2*r1.mass)*(r1.k0^2 + 1/(2*r1.delta^2))*H2eV;
-fprintf(' Gaussian wavepacket kinetic energy: %.12f\n', eGT)
+eGT = 1/(2*r1.mass)*(r1.k0^2 + 1/(2*r1.delta^2));
+fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
 
 % r2: r
 
-r2.n = int32(512);
+r2.n = int32(768);
 r2.r = linspace(1.5, 12.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
@@ -65,7 +65,7 @@ r2.dump = WoodsSaxon(4.0, 10.0, r2.r);
 rd = 7.0;
 nDivdSurf = int32((rd - min(r2.r))/r2.dr);
 r2Div = double(nDivdSurf)*r2.dr + min(r2.r);
-fprintf(' Dviding surface: %.8f\n', r2Div);
+fprintf(' Dviding surface: %.15f\n', r2Div);
 
 % theta
 
@@ -91,7 +91,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 % PlotPotWave(r1, r2, potential, psi)
 
 J = 5;
-parity = 0;
+parity = 1;
 lMax = 180;
 
 wavepacket_parameters.J = int32(J);
@@ -119,7 +119,7 @@ for k = 1 : theta.n
   wavepackets(:,:,k,:) = wavepackets(:,:,k,:)*sqrt(theta.w(k));
 end
 
-sum(sum(sum(conj(wavepackets).*wavepackets)))*r1.dr*r2.dr
+% sum(sum(sum(conj(wavepackets).*wavepackets)))*r1.dr*r2.dr
 
 wavepacket_parameters.weighted_wavepackets = wavepackets;
 

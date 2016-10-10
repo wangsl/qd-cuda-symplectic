@@ -39,5 +39,18 @@ phi = vecs(:, nVbs)/sqrt(dr);
 
 phi = phi';
 
+ePot = sum(phi.*OOPES(r).*phi)*dr;
+eRot = sum(phi.*jRot*(jRot+1)./(2*mu*r.^2).*phi)*dr;
+eKin = e - ePot - eRot;
+
+fprintf(' O2 vibrational wavefunction module: %.15f\n', ...
+	sum(phi.*phi)*dr);
+fprintf(' O2 total energy: %.15f\n', e);
+fprintf(' O2 radial kinetic energy: %.15f\n', eKin);
+fprintf(' O2 rotational energy: %.15f\n', eRot);
+fprintf(' O2 potential energy: %.15f\n', ePot);
+
+
+
 
 
