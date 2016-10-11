@@ -21,7 +21,7 @@ public:
   void test_parallel();
 
 private:
-
+  
   Vec<OmegaWavepacket *> omega_wavepackets;
 
   int _device_index;
@@ -33,10 +33,10 @@ private:
   double *cufft_work_dev;
   double *omega_wavepacket_from_left_device;
   double *omega_wavepacket_from_right_device;
-
+  
   cublasHandle_t cublas_handle;
   int _has_created_cublas_handle;
-
+  
   cufftHandle cufft_plan_D2Z;
   cufftHandle cufft_plan_Z2D;
   int _has_cufft_plans;

@@ -23,16 +23,16 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
   cufft_plan_Z2D(cufft_plan_Z2D_),
   cufft_work_dev(cufft_work_dev_),
   weighted_psi_real(0), weighted_psi_imag(0), 
-  weighted_psi_dev(0),
-  weighted_psi_real_dev(0), weighted_psi_imag_dev(0),
+  weighted_psi_dev(0), weighted_psi_real_dev(0), weighted_psi_imag_dev(0),
   weighted_associated_legendres_dev(0),
-  weighted_legendre_psi_dev(0),
-  H_weighted_psi_dev(0), H_weighted_legendre_psi_dev(0)
+  H_weighted_psi_dev(0), H_weighted_legendre_psi_dev(0),
+  legendre_psi_dev(0)
 { 
   insist(potential_dev);
 
   copy_weighted_psi_from_host_to_device();
-  copy_weighted_associated_legendres_to_device();
+  copy_weighted_associated_legendres_from_host_to_device();
+  setup_legendre_psi_dev();
 }
 
 OmegaWavepacket::~OmegaWavepacket()
@@ -48,9 +48,10 @@ OmegaWavepacket::~OmegaWavepacket()
   _CUDA_FREE_(weighted_psi_imag_dev);
   _CUDA_FREE_(weighted_associated_legendres_dev);
   
-  _CUDA_FREE_(weighted_legendre_psi_dev);
   _CUDA_FREE_(H_weighted_psi_dev);
   _CUDA_FREE_(H_weighted_legendre_psi_dev);
+
+  _CUDA_FREE_(legendre_psi_dev);
 }
 
 void OmegaWavepacket::copy_weighted_psi_from_host_to_device()
@@ -113,11 +114,11 @@ void OmegaWavepacket::setup_weighted_psi()
   weighted_psi_imag = weighted_wavepackets_imag[omega_index];
 }
 
-void OmegaWavepacket::copy_weighted_associated_legendres_to_device()
+void OmegaWavepacket::copy_weighted_associated_legendres_from_host_to_device()
 {
   if(weighted_associated_legendres_dev) return;
 
-  std::cout << " Copy associated Legendres to device, Omega: " << omega << std::endl;
+  std::cout << " Copy associated Legendres to device, Omega: " << omega; //<< std::endl;
   
   const int &n_theta = MatlabData::theta()->n;
   const int &l_max = MatlabData::wavepacket_parameters()->l_max;
@@ -131,6 +132,8 @@ void OmegaWavepacket::copy_weighted_associated_legendres_to_device()
   const RMat &ass_Leg = Legendres[omega_index];
   
   insist(ass_Leg.rows() == n_theta && ass_Leg.columns() == n_ass_Legs);
+
+  std::cout << ", size: " << n_theta << " " << n_ass_Legs << std::endl;
 
   checkCudaErrors(cudaMalloc(&weighted_associated_legendres_dev, n_theta*n_ass_Legs*sizeof(double)));
   insist(weighted_associated_legendres_dev);
@@ -159,23 +162,13 @@ double OmegaWavepacket::dot_product_with_volume_element(const double *x_dev, con
   return s;
 }
 
-void OmegaWavepacket::_calculate_wavepacket_module()
-{
-  const double s = dot_product_with_volume_element(weighted_psi_dev, weighted_psi_dev);
-  
-  if(weighted_psi_dev == weighted_psi_real_dev)
-    _wavepacket_module_from_real = s;
-  else if(weighted_psi_dev == weighted_psi_imag_dev)
-    _wavepacket_module_from_imag = s;
-}
-
 void OmegaWavepacket::calculate_wavepacket_module()
 {
-  weighted_psi_dev = weighted_psi_real_dev;
-  _calculate_wavepacket_module();
+  _wavepacket_module_from_real = dot_product_with_volume_element(weighted_psi_real_dev,
+								 weighted_psi_real_dev);
   
-  weighted_psi_dev = weighted_psi_imag_dev;
-  _calculate_wavepacket_module();
+  _wavepacket_module_from_imag = dot_product_with_volume_element(weighted_psi_imag_dev,
+								 weighted_psi_imag_dev);
 }
 
 void OmegaWavepacket::_calculate_kinetic_on_weighted_psi()
@@ -225,17 +218,91 @@ void OmegaWavepacket::_calculate_potential_on_weighted_psi()
 						       n1*n2*n_theta);
 }
 
+void OmegaWavepacket::setup_legendre_psi_dev()
+{
+  if(legendre_psi_dev) return;
+  
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int n_Legs = MatlabData::wavepacket_parameters()->l_max + 1;
+  
+  std::cout << " Setup Legendre psi, Omega: " << omega 
+	    << " " << n1 << " " << n2 << " " << n_Legs << std::endl;
+  
+  checkCudaErrors(cudaMalloc(&legendre_psi_dev, n1*n2*n_Legs*sizeof(double)));
+  insist(legendre_psi_dev);
+}
+
+void OmegaWavepacket::forward_legendre_transform()
+{ 
+  insist(legendre_psi_dev && weighted_associated_legendres_dev);
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+  
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+
+  const double zero = 0.0;
+  const double one = 1.0;
+  
+  double *legendre_psi_dev_ = legendre_psi_dev + omega*n1*n2;
+
+  insist(cublasDgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
+		     n1*n2, n_Legs, n_theta, 
+		     &one, 
+		     weighted_psi_dev, n1*n2,
+		     weighted_associated_legendres_dev, n_theta, 
+		     &zero,
+		     legendre_psi_dev_, n1*n2) == CUBLAS_STATUS_SUCCESS);
+}
+
+void OmegaWavepacket::backward_legendre_transform()
+{ 
+  insist(legendre_psi_dev && weighted_associated_legendres_dev);
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+  
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  
+  const double zero = 0.0;
+  const double one = 1.0;
+  
+  double *legendre_psi_dev_ = legendre_psi_dev + omega*n1*n2;
+
+  insist(cublasDgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
+		     n1*n2, n_theta, n_Legs,
+		     &one, 
+		     legendre_psi_dev_, n1*n2,
+		     weighted_associated_legendres_dev, n_theta, 
+		     &zero,
+		     weighted_psi_dev, n1*n2) == CUBLAS_STATUS_SUCCESS);
+}
+
 void OmegaWavepacket::test_parallel()
 {
   weighted_psi_dev = weighted_psi_real_dev;
+  forward_legendre_transform();
+  backward_legendre_transform();
   
+  weighted_psi_dev = weighted_psi_imag_dev;
+  forward_legendre_transform();
+  backward_legendre_transform();
+
+  calculate_wavepacket_module();
+
+  return;
+  
+  weighted_psi_dev = weighted_psi_real_dev;
+
   _calculate_kinetic_on_weighted_psi();
   _kinetic_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
 
   _calculate_potential_on_weighted_psi();
   _potential_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
   _potential_energy_from_real -= _kinetic_energy_from_real;
-  
   
   weighted_psi_dev = weighted_psi_imag_dev;
 
@@ -245,6 +312,4 @@ void OmegaWavepacket::test_parallel()
   _calculate_potential_on_weighted_psi();
   _potential_energy_from_imag = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
   _potential_energy_from_imag -= _kinetic_energy_from_imag;
-  
-  calculate_wavepacket_module();
 }

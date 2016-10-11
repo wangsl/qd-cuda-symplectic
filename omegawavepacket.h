@@ -40,14 +40,16 @@ private:
   const int omega;
 
   const double *potential_dev;
+  
   double *weighted_psi_dev;
   double *weighted_psi_real_dev;
   double *weighted_psi_imag_dev;
   double *weighted_associated_legendres_dev;
-
-  double *weighted_legendre_psi_dev;
+						
   double *H_weighted_psi_dev;
   double *H_weighted_legendre_psi_dev;
+
+  double *legendre_psi_dev;
 
   double * &cufft_work_dev;
 
@@ -68,15 +70,20 @@ private:
   void copy_weighted_psi_from_host_to_device();
   void copy_weighted_psi_from_device_to_host();
 
-  void copy_weighted_associated_legendres_to_device();
+  void copy_weighted_associated_legendres_from_host_to_device();
+  
+  void setup_legendre_psi_dev();
 
-  void _calculate_wavepacket_module();
+  //void _calculate_wavepacket_module();
 
   void _calculate_kinetic_on_weighted_psi();
   void _calculate_potential_on_weighted_psi();
 
   void cufft_D2Z_for_weighted_psi();
   void cufft_Z2D_for_weighted_psi();
+
+  void forward_legendre_transform();
+  void backward_legendre_transform();
 
   double dot_product_with_volume_element(const double *x_dev, const double *y_dev) const;
 };

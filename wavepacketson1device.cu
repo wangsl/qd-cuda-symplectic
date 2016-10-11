@@ -239,9 +239,9 @@ void WavepacketsOnSingleDevice::test()
   setup_device();
   std::cout << " Test on device: " << current_device_index() << std::endl;
   for(int i = 0; i < n_omegas; i++)
-    std::cout << " " << omega_wavepackets[i]->wavepacket_module() 
-	      << " " << omega_wavepackets[i]->kinetic_energy() 
-	      << " " << omega_wavepackets[i]->potential_energy()
-	      << std::endl;
+    std::cout << " " << omega_wavepackets[i]->wavepacket_module() << std::endl;
+  //<< " " << omega_wavepackets[i]->kinetic_energy() 
+  //<< " " << omega_wavepackets[i]->potential_energy()
+  //<< std::endl;
 
 }

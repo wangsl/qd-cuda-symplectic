@@ -84,44 +84,6 @@ WavepacketParameters::WavepacketParameters(const mxArray *mx) :
   setup_weighted_associated_legendres();
 }
   
-void WavepacketParameters::setup_weighted_associated_legendres()
-{ 
-  const mxArray *ass_legs_ptr = mxGetField(mx, 0, "weighted_associated_legendres");
-  
-  if(!ass_legs_ptr) return;
-
-  const MatlabArray<double> ass_legs(ass_legs_ptr);
-  
-  insist(ass_legs.n_dims() == 2 || ass_legs.n_dims() == 3);
-  
-  const size_t *dims = ass_legs.dims();
-  
-  const int n1 = dims[0];
-  const int n2 = dims[1];
-  const int n3 = ass_legs.n_dims() == 3 ? dims[2] : 1;
-
-  if(MatlabData::theta()) {
-    insist(n1 == MatlabData::theta()->n);
-    insist(MatlabData::theta()->n > l_max+1);
-  }
-  
-  if(omega_min == 0) 
-    insist(n2 == l_max+1 && n3 == omega_max+1);
-  else if(omega_min == 1)
-    insist(n2 == l_max && n3 == omega_max);
-  
-  std::cout << " Weighted associated Legendres size: " << n1 << " " << n2 << " " << n3 << std::endl;
-
-  weighted_associated_legendres.resize(n3);
-
-  const double *p = ass_legs.data();
-  for(int i = 0; i < n3; i++) {
-    p += i*n1;
-    weighted_associated_legendres[i] = RMat(n1, n2-i, const_cast<double *>(p));
-    p += n1*n2;
-  }
-}
-
 void WavepacketParameters::setup_weighted_wavepackets()
 { 
   const mxArray *wps_ptr = mxGetField(mx, 0, "weighted_wavepackets");
@@ -154,5 +116,42 @@ void WavepacketParameters::setup_weighted_wavepackets()
   for(int i = 0; i < n4; i++) {
     weighted_wavepackets_real[i] = RVec(n1*n2*n3, const_cast<double *>(wps_real+i*n1*n2*n3));
     weighted_wavepackets_imag[i] = RVec(n1*n2*n3, const_cast<double *>(wps_imag+i*n1*n2*n3));
+  }
+}
+
+void WavepacketParameters::setup_weighted_associated_legendres()
+{ 
+  const mxArray *ass_legs_ptr = mxGetField(mx, 0, "weighted_associated_legendres");
+  
+  if(!ass_legs_ptr) return;
+
+  const MatlabArray<double> ass_legs(ass_legs_ptr);
+  
+  insist(ass_legs.n_dims() == 2 || ass_legs.n_dims() == 3);
+  
+  const size_t *dims = ass_legs.dims();
+  
+  const int n1 = dims[0];
+  const int n2 = dims[1];
+  const int n3 = ass_legs.n_dims() == 3 ? dims[2] : 1;
+
+  if(MatlabData::theta()) {
+    insist(n1 == MatlabData::theta()->n);
+    insist(MatlabData::theta()->n > l_max+1);
+  }
+  
+  if(omega_min == 0) 
+    insist(n2 == l_max+1 && n3 == omega_max+1);
+  else if(omega_min == 1)
+    insist(n2 == l_max && n3 == omega_max);
+  
+  std::cout << " Weighted associated Legendres size: " << n1 << " " << n2 << " " << n3 << std::endl;
+
+  weighted_associated_legendres.resize(n3);
+
+  const double *p = ass_legs.data();
+  for(int i = 0; i < n3; i++) {
+    weighted_associated_legendres[i] = RMat(n1, n2-i, const_cast<double *>(p+i*n1));
+    p += n1*n2;
   }
 }

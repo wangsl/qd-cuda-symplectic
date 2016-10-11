@@ -16,8 +16,8 @@
 #undef printf
 #endif
 
-#define _mxInt32_ 1032
-#define _mxDouble_ 1064
+#define _mxInt32_ 32
+#define _mxDouble_ 64
 
 #ifdef __cplusplus
 

@@ -8,7 +8,7 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 5;
+jRot = 10;
 nVib = 1;
 %end
 
@@ -30,13 +30,13 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(10000);
+time.total_steps = int32(1);
 time.time_step = 1;
 time.steps = int32(0);
 
 % r1: R
 
-r1.n = int32(768);
+r1.n = int32(512);
 r1.r = linspace(1.5, 16.0, r1.n);
 r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
@@ -53,7 +53,7 @@ fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
 
 % r2: r
 
-r2.n = int32(768);
+r2.n = int32(512);
 r2.r = linspace(1.5, 12.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
@@ -90,7 +90,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 5;
+J = 6;
 parity = 1;
 lMax = 180;
 
@@ -120,6 +120,26 @@ for k = 1 : theta.n
 end
 
 % sum(sum(sum(conj(wavepackets).*wavepackets)))*r1.dr*r2.dr
+
+sum(sum(sum(conj(wavepackets(:,:,:,1)).*...
+		 wavepackets(:,:,:,1))))*r1.dr*r2.dr
+
+
+sum(sum(sum(conj(wavepackets(:,:,:,1)).*potential.*...
+		 wavepackets(:,:,:,1))))*r1.dr*r2.dr
+
+for o = OmegaMin : OmegaMax
+  O = o + 1 - OmegaMin;
+  p1 = P(:,:,O);
+  psi1 = wavepackets(:,:,:,O);
+  [ n1, n2, n3 ] = size(psi1);
+  psi1 = reshape(psi1, [n1*n2, n3]);
+  g1 = psi1*p1;
+  psi1 = g1*p1';
+  s = sum(sum(conj(psi1).*psi1))*r1.dr*r2.dr;
+  fprintf('%d %.15f\n', O, s)
+end
+clear p1 psi1 n1 n2 n3 whog1 s o O
 
 wavepacket_parameters.weighted_wavepackets = wavepackets;
 
