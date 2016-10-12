@@ -31,6 +31,12 @@ private:
   
   void setup_wavepackets_on_single_device();
   void destroy_wavepackets_on_single_device();
+
+  void enable_peer_to_peer_access() const;
+  void disable_peer_to_peer_access() const;
+
+  void setup_device_neighbours() const;
+  void setup_work_spaces_on_devices() const;
 };
 
 #endif /* CUDA_OPENMP_MD_H */

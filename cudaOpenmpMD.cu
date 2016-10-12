@@ -23,12 +23,14 @@ CUDAOpenmpMD::CUDAOpenmpMD() :
 { 
   setup_n_devices();
   setup_wavepackets_on_single_device();
+  enable_peer_to_peer_access();
 }
 
 CUDAOpenmpMD::~CUDAOpenmpMD() 
 { 
   devices_memory_usage();
   destroy_wavepackets_on_single_device();
+  disable_peer_to_peer_access();
   reset_devices();
 }
 
@@ -103,6 +105,9 @@ void CUDAOpenmpMD::setup_wavepackets_on_single_device()
 
     omega_start += n_omegas;
   }
+
+  setup_device_neighbours();
+  setup_work_spaces_on_devices();
   
   devices_synchoronize();
   devices_memory_usage();
@@ -120,18 +125,87 @@ void CUDAOpenmpMD::destroy_wavepackets_on_single_device()
   wavepackets_on_single_device.resize(0);
 }
 
+void CUDAOpenmpMD::enable_peer_to_peer_access() const
+{ 
+  if(n_devices() == 1) return;
+
+  std::cout << " Enable peer to peer memory access" << std::endl;
+  
+  for(int i_dev = 0; i_dev < n_devices(); i_dev++) {
+    for(int j_dev = i_dev+1; j_dev < n_devices(); j_dev++) {
+      checkCudaErrors(cudaSetDevice(i_dev));
+      checkCudaErrors(cudaDeviceEnablePeerAccess(j_dev, 0));
+      
+      checkCudaErrors(cudaSetDevice(j_dev));
+      checkCudaErrors(cudaDeviceEnablePeerAccess(i_dev, 0));
+    }
+  }
+}
+
+void CUDAOpenmpMD::disable_peer_to_peer_access() const
+{
+  if(n_devices() == 1) return;
+  
+  std::cout << " Disable peer to peer memory access" << std::endl;
+  
+  for(int i_dev = 0; i_dev < n_devices(); i_dev++) {
+    for(int j_dev = i_dev+1; j_dev < n_devices(); j_dev++) {
+      checkCudaErrors(cudaSetDevice(i_dev));
+      checkCudaErrors(cudaDeviceDisablePeerAccess(j_dev));
+      
+      checkCudaErrors(cudaSetDevice(j_dev));
+      checkCudaErrors(cudaDeviceDisablePeerAccess(i_dev));
+    }
+  }
+}
+
+void CUDAOpenmpMD::setup_device_neighbours() const
+{
+  if(n_devices() == 1) return;
+  
+  std::cout << " Setup devices neighbours" << std::endl;
+
+  const int &n = wavepackets_on_single_device.size();
+
+  wavepackets_on_single_device[0]->setup_neighbours(0, wavepackets_on_single_device[1]);
+  
+  for(int i = 1; i < n-1; i++) {
+    wavepackets_on_single_device[i]->setup_neighbours(wavepackets_on_single_device[i-1],
+						      wavepackets_on_single_device[i+1]);
+  }
+  
+  wavepackets_on_single_device[n-1]->setup_neighbours(wavepackets_on_single_device[n-2], 0);
+}
+
+void CUDAOpenmpMD::setup_work_spaces_on_devices() const
+{
+  std::cout << " Setup work spaces on devices" << std::endl;
+  
+  const int &n = wavepackets_on_single_device.size();
+  for(int i = 0; i < n; i++)
+    wavepackets_on_single_device[i]->setup_work_spaces_on_device();
+}
+
 void CUDAOpenmpMD::test()
 {
   for(int L = 0; L < MatlabData::time()->total_steps; L++) {
 
-  omp_set_num_threads(n_devices());
+    std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;
+    
+    omp_set_num_threads(n_devices());
 #pragma omp parallel for default(shared)
-  for(int i_dev = 0; i_dev < n_devices(); i_dev++)
-    wavepackets_on_single_device[i_dev]->test_parallel();
-  
-  for(int i_dev = 0; i_dev < n_devices(); i_dev++)
-    wavepackets_on_single_device[i_dev]->test();
+    for(int i_dev = 0; i_dev < n_devices(); i_dev++)
+      wavepackets_on_single_device[i_dev]->test_parallel();
 
+    devices_synchoronize();
+  
+    for(int i_dev = 0; i_dev < n_devices(); i_dev++)
+      wavepackets_on_single_device[i_dev]->test_serial();
   }
+
+  std::cout << std::endl;
 }
+
+
+  
 

@@ -14,6 +14,7 @@ public:
 		  cublasHandle_t &cublas_handle,
 		  cufftHandle &cufft_plan_D2Z,
 		  cufftHandle &cufft_plan_Z2D,
+		  cudaStream_t * &computation_stream,
 		  double * &cufft_work_dev
 		  );
 
@@ -31,6 +32,12 @@ public:
   { return _potential_energy_from_real + _potential_energy_from_imag; }
 
   void test_parallel();
+
+  void forward_legendre_transform(const int part);
+  void backward_legendre_transform(const int part);
+
+  const double *legendre_psi_dev_() const { return legendre_psi_dev; }
+  const int &omega_() const { return omega; }
   
 private:
 
@@ -56,6 +63,7 @@ private:
   cublasHandle_t &cublas_handle;
   cufftHandle &cufft_plan_D2Z;
   cufftHandle &cufft_plan_Z2D;
+  cudaStream_t * &computation_stream;
 
   double _wavepacket_module_from_real;
   double _wavepacket_module_from_imag;

@@ -30,7 +30,7 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(1);
+time.total_steps = int32(100);
 time.time_step = 1;
 time.steps = int32(0);
 
@@ -90,7 +90,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 6;
+J = 8;
 parity = 1;
 lMax = 180;
 
@@ -140,6 +140,7 @@ for o = OmegaMin : OmegaMax
   fprintf('%d %.15f\n', O, s)
 end
 clear p1 psi1 n1 n2 n3 whog1 s o O
+
 
 wavepacket_parameters.weighted_wavepackets = wavepackets;
 

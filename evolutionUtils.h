@@ -4,6 +4,9 @@
 
 #include "matlabStructures.h"
 
+#define _RealPart_ 1
+#define _ImagPart_ 2
+
 #ifdef __NVCC__
 
 #define _DumpMaxSize_ 1024

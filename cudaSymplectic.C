@@ -58,8 +58,10 @@ void mexFunction(int nlhs, mxArray *plhs[],
   insist(evolCUDA);
   evolCUDA->test();
   if(evolCUDA) { delete evolCUDA; evolCUDA = 0; }
-
+  
   MatlabData::destroy_all_data();
+  
+  std::cout << std::endl;  
 
   int n_cpu_cores = sysconf(_SC_NPROCESSORS_ONLN);
   omp_set_num_threads(n_cpu_cores);

@@ -14,6 +14,7 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
 				 cublasHandle_t &cublas_handle_,
 				 cufftHandle &cufft_plan_D2Z_,
 				 cufftHandle &cufft_plan_Z2D_,
+				 cudaStream_t * &computation_stream_,
 				 double * &cufft_work_dev_
 				 ) :
   omega(omega_), 
@@ -21,6 +22,7 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
   cublas_handle(cublas_handle_), 
   cufft_plan_D2Z(cufft_plan_D2Z_),
   cufft_plan_Z2D(cufft_plan_Z2D_),
+  computation_stream(computation_stream_),
   cufft_work_dev(cufft_work_dev_),
   weighted_psi_real(0), weighted_psi_imag(0), 
   weighted_psi_dev(0), weighted_psi_real_dev(0), weighted_psi_imag_dev(0),
@@ -29,7 +31,7 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
   legendre_psi_dev(0)
 { 
   insist(potential_dev);
-
+  insist(computation_stream);
   copy_weighted_psi_from_host_to_device();
   copy_weighted_associated_legendres_from_host_to_device();
   setup_legendre_psi_dev();
@@ -118,7 +120,7 @@ void OmegaWavepacket::copy_weighted_associated_legendres_from_host_to_device()
 {
   if(weighted_associated_legendres_dev) return;
 
-  std::cout << " Copy associated Legendres to device, Omega: " << omega; //<< std::endl;
+  std::cout << " Copy associated Legendres to device, Omega: " << omega;
   
   const int &n_theta = MatlabData::theta()->n;
   const int &l_max = MatlabData::wavepacket_parameters()->l_max;
@@ -173,6 +175,8 @@ void OmegaWavepacket::calculate_wavepacket_module()
 
 void OmegaWavepacket::_calculate_kinetic_on_weighted_psi()
 {
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
@@ -182,7 +186,6 @@ void OmegaWavepacket::_calculate_kinetic_on_weighted_psi()
   
   insist(H_weighted_psi_dev);
   
-  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
   insist(cufft_work_dev);
   
   insist(cufftExecD2Z(cufft_plan_D2Z, (cufftDoubleReal *) weighted_psi_dev,
@@ -205,6 +208,8 @@ void OmegaWavepacket::_calculate_kinetic_on_weighted_psi()
 
 void OmegaWavepacket::_calculate_potential_on_weighted_psi()
 {
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+  
   insist(H_weighted_psi_dev);
   
   const int &n1 = MatlabData::r1()->n;
@@ -235,8 +240,9 @@ void OmegaWavepacket::setup_legendre_psi_dev()
 
 void OmegaWavepacket::forward_legendre_transform()
 { 
-  insist(legendre_psi_dev && weighted_associated_legendres_dev);
   insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+
+  insist(legendre_psi_dev && weighted_associated_legendres_dev);
   
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
@@ -259,8 +265,9 @@ void OmegaWavepacket::forward_legendre_transform()
 
 void OmegaWavepacket::backward_legendre_transform()
 { 
-  insist(legendre_psi_dev && weighted_associated_legendres_dev);
   insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+
+  insist(legendre_psi_dev && weighted_associated_legendres_dev);
   
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
@@ -281,31 +288,62 @@ void OmegaWavepacket::backward_legendre_transform()
 		     weighted_psi_dev, n1*n2) == CUBLAS_STATUS_SUCCESS);
 }
 
+void OmegaWavepacket::forward_legendre_transform(const int part)
+{
+  if(part == _RealPart_)
+    weighted_psi_dev = weighted_psi_real_dev;
+  else if(part == _ImagPart_) 
+    weighted_psi_dev = weighted_psi_imag_dev;
+  else 
+    insist(0);
+  
+  if(computation_stream)
+    insist(cublasSetStream(cublas_handle, *computation_stream) == CUBLAS_STATUS_SUCCESS);
+  
+  forward_legendre_transform();
+}
+
+void OmegaWavepacket::backward_legendre_transform(const int part)
+{
+  if(part == _RealPart_)
+    weighted_psi_dev = weighted_psi_real_dev;
+  else if(part == _ImagPart_) 
+    weighted_psi_dev = weighted_psi_imag_dev;
+  else 
+    insist(0);
+  
+  if(computation_stream)
+    insist(cublasSetStream(cublas_handle, *computation_stream) == CUBLAS_STATUS_SUCCESS);
+  
+  backward_legendre_transform();
+}
+
 void OmegaWavepacket::test_parallel()
 {
-  weighted_psi_dev = weighted_psi_real_dev;
-  forward_legendre_transform();
-  backward_legendre_transform();
+  //if(computation_stream)
+  insist(cublasSetStream(cublas_handle, NULL) == CUBLAS_STATUS_SUCCESS);
   
-  weighted_psi_dev = weighted_psi_imag_dev;
-  forward_legendre_transform();
-  backward_legendre_transform();
+  //weighted_psi_dev = weighted_psi_real_dev;
+  //forward_legendre_transform();
+  //backward_legendre_transform();
+  
+  //weighted_psi_dev = weighted_psi_imag_dev;
+  //forward_legendre_transform();
+  //backward_legendre_transform();
 
   calculate_wavepacket_module();
 
-  return;
-  
   weighted_psi_dev = weighted_psi_real_dev;
 
   _calculate_kinetic_on_weighted_psi();
   _kinetic_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
-
+  
   _calculate_potential_on_weighted_psi();
   _potential_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
   _potential_energy_from_real -= _kinetic_energy_from_real;
   
   weighted_psi_dev = weighted_psi_imag_dev;
-
+  
   _calculate_kinetic_on_weighted_psi();
   _kinetic_energy_from_imag = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
   
