@@ -25,6 +25,9 @@ public:
   double wavepacket_module() const 
   { return _wavepacket_module_from_real + _wavepacket_module_from_imag; }
 
+  double wavepacket_module_legendre() const 
+  { return _wavepacket_module_from_real_legendre + _wavepacket_module_from_imag_legendre; }
+
   double kinetic_energy() const
   { return _kinetic_energy_from_real + _kinetic_energy_from_imag; }
 
@@ -67,6 +70,9 @@ private:
 
   double _wavepacket_module_from_real;
   double _wavepacket_module_from_imag;
+
+  double _wavepacket_module_from_real_legendre;
+  double _wavepacket_module_from_imag_legendre;
   
   double _kinetic_energy_from_real;
   double _kinetic_energy_from_imag;
@@ -94,6 +100,7 @@ private:
   void backward_legendre_transform();
 
   double dot_product_with_volume_element(const double *x_dev, const double *y_dev) const;
+  double dot_product_with_volume_element_legendres(const double *x_dev, const double *y_dev) const;
 };
 
 #endif /* OMEGA_WAVEPACKET_H */

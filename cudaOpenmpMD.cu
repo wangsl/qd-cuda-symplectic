@@ -2,6 +2,7 @@
 #include <iostream>
 #include <helper_cuda.h>
 #include <omp.h>
+#include <cuda_profiler_api.h>
 
 #include "cudaOpenmpMD.h"
 #include "cudaUtils.h"
@@ -106,7 +107,7 @@ void CUDAOpenmpMD::setup_wavepackets_on_single_device()
     omega_start += n_omegas;
   }
 
-  setup_device_neighbours();
+  setup_devices_neighbours();
   setup_work_spaces_on_devices();
   
   devices_synchoronize();
@@ -159,7 +160,7 @@ void CUDAOpenmpMD::disable_peer_to_peer_access() const
   }
 }
 
-void CUDAOpenmpMD::setup_device_neighbours() const
+void CUDAOpenmpMD::setup_devices_neighbours() const
 {
   if(n_devices() == 1) return;
   
@@ -191,21 +192,24 @@ void CUDAOpenmpMD::test()
   for(int L = 0; L < MatlabData::time()->total_steps; L++) {
 
     std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;
+
+    checkCudaErrors(cudaProfilerStart());
     
     omp_set_num_threads(n_devices());
-#pragma omp parallel for default(shared)
-    for(int i_dev = 0; i_dev < n_devices(); i_dev++)
-      wavepackets_on_single_device[i_dev]->test_parallel();
 
+    for(int l = 0; l < 6; l++) {
+#pragma omp parallel for default(shared)
+      for(int i_dev = 0; i_dev < n_devices(); i_dev++)
+	wavepackets_on_single_device[i_dev]->test_parallel();
+    }
+    
+    checkCudaErrors(cudaProfilerStop());
+    
     devices_synchoronize();
-  
+
     for(int i_dev = 0; i_dev < n_devices(); i_dev++)
       wavepackets_on_single_device[i_dev]->test_serial();
   }
 
   std::cout << std::endl;
 }
-
-
-  
-

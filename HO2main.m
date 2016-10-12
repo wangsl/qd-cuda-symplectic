@@ -8,7 +8,7 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 10;
+jRot = 20;
 nVib = 1;
 %end
 
@@ -90,7 +90,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 8;
+J = 16;
 parity = 1;
 lMax = 180;
 

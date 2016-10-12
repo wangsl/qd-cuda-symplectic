@@ -164,6 +164,30 @@ double OmegaWavepacket::dot_product_with_volume_element(const double *x_dev, con
   return s;
 }
 
+double OmegaWavepacket::
+dot_product_with_volume_element_legendres(const double *x_dev, const double *y_dev) const
+{
+  insist(x_dev && y_dev);
+
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  
+  const double &dr1 = MatlabData::r1()->dr;
+  const double &dr2 = MatlabData::r2()->dr;
+
+  const double *x = x_dev + omega*n1*n2;
+  const double *y = y_dev + omega*n1*n2;
+  
+  double s = 0.0;
+  insist(cublasDdot(cublas_handle, n1*n2*n_Legs, 
+		    x, 1, y, 1, &s) == CUBLAS_STATUS_SUCCESS);
+  
+  s *= dr1*dr2;
+
+  return s;
+}
+
 void OmegaWavepacket::calculate_wavepacket_module()
 {
   _wavepacket_module_from_real = dot_product_with_volume_element(weighted_psi_real_dev,
@@ -301,6 +325,13 @@ void OmegaWavepacket::forward_legendre_transform(const int part)
     insist(cublasSetStream(cublas_handle, *computation_stream) == CUBLAS_STATUS_SUCCESS);
   
   forward_legendre_transform();
+  
+  const double s = dot_product_with_volume_element_legendres(legendre_psi_dev, legendre_psi_dev);
+  
+  if(weighted_psi_dev == weighted_psi_real_dev)
+    _wavepacket_module_from_real_legendre = s;
+  else if(weighted_psi_dev = weighted_psi_imag_dev)
+    _wavepacket_module_from_imag_legendre = s;
 }
 
 void OmegaWavepacket::backward_legendre_transform(const int part)

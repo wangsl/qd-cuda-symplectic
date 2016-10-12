@@ -35,7 +35,7 @@ private:
   void enable_peer_to_peer_access() const;
   void disable_peer_to_peer_access() const;
 
-  void setup_device_neighbours() const;
+  void setup_devices_neighbours() const;
   void setup_work_spaces_on_devices() const;
 };
 

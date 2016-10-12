@@ -219,6 +219,8 @@ void WavepacketsOnSingleDevice::setup_work_spaces_on_device()
 
   setup_device();
   
+  // sizes should be fixed.
+
   if(left) {
     if(!omega_wavepacket_from_left_device) {
       std::cout << " Setup wavepacket from left on device: " << current_device_index() << std::endl;
@@ -406,7 +408,17 @@ void WavepacketsOnSingleDevice::test_parallel()
   
   for(int i = 0; i < n_omegas; i++)
     omega_wavepackets[i]->backward_legendre_transform(_ImagPart_);
+
+  // now to cheeck if data copies from left and right have finished
   
+  if(left)
+    checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *left->copy_to_right_event, 0));
+  
+  if(right)
+    checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *right->copy_to_left_event, 0));
+  
+  // now to cheeck if data from left and right has finished
+
   checkCudaErrors(cudaDeviceSynchronize());
 
   for(int i = 0; i < n_omegas; i++) {
@@ -421,6 +433,7 @@ void WavepacketsOnSingleDevice::test_serial()
   for(int i = 0; i < n_omegas; i++)
     std::cout << " " << omega_wavepackets[i]->omega_()
 	      << " " << omega_wavepackets[i]->wavepacket_module()
+	      << " " << omega_wavepackets[i]->wavepacket_module_legendre()
 	      << " " << omega_wavepackets[i]->kinetic_energy() 
 	      << " " << omega_wavepackets[i]->potential_energy()
 	      << std::endl;
