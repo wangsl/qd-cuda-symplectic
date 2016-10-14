@@ -108,8 +108,9 @@ void CUDAOpenmpMD::setup_wavepackets_on_single_device()
   }
 
   setup_devices_neighbours();
-  setup_work_spaces_on_devices();
-  
+
+  setup_device_work_dev_on_devices();
+
   devices_synchoronize();
   devices_memory_usage();
 }
@@ -178,17 +179,16 @@ void CUDAOpenmpMD::setup_devices_neighbours() const
   wavepackets_on_single_device[n-1]->setup_neighbours(wavepackets_on_single_device[n-2], 0);
 }
 
-void CUDAOpenmpMD::setup_work_spaces_on_devices() const
+void CUDAOpenmpMD::setup_device_work_dev_on_devices() const
 {
-  std::cout << " Setup work spaces on devices" << std::endl;
-  
   const int &n = wavepackets_on_single_device.size();
   for(int i = 0; i < n; i++)
-    wavepackets_on_single_device[i]->setup_work_spaces_on_device();
+    wavepackets_on_single_device[i]->setup_device_work_dev_and_copy_streams_events();
 }
 
 void CUDAOpenmpMD::test()
 {
+  
   for(int L = 0; L < MatlabData::time()->total_steps; L++) {
 
     std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;

@@ -8,7 +8,7 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 20;
+jRot = 1;
 nVib = 1;
 %end
 
@@ -90,7 +90,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 16;
+J = 6;
 parity = 1;
 lMax = 180;
 
@@ -120,7 +120,7 @@ for k = 1 : theta.n
 end
 
 % sum(sum(sum(conj(wavepackets).*wavepackets)))*r1.dr*r2.dr
-
+%{
 sum(sum(sum(conj(wavepackets(:,:,:,1)).*...
 		 wavepackets(:,:,:,1))))*r1.dr*r2.dr
 
@@ -137,10 +137,10 @@ for o = OmegaMin : OmegaMax
   g1 = psi1*p1;
   psi1 = g1*p1';
   s = sum(sum(conj(psi1).*psi1))*r1.dr*r2.dr;
-  fprintf('%d %.15f\n', O, s)
+  fprintf(' %d %.15f\n', O, s)
 end
 clear p1 psi1 n1 n2 n3 whog1 s o O
-
+%}
 
 wavepacket_parameters.weighted_wavepackets = wavepackets;
 

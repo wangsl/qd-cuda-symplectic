@@ -17,15 +17,17 @@ public:
 
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
-  void test_serial();
   void test_parallel();
+  void test_serial();
 
   void setup_neighbours(const WavepacketsOnSingleDevice *left, 
 			const WavepacketsOnSingleDevice *right);
 
-  void setup_work_spaces_on_device();
+  void setup_device_work_dev_and_copy_streams_events();
 
   void forward_legendre_transform_and_copy_data_to_neighbour_devices(const int type);
+
+  void calculate_T_asym_add_to_T_angle_legendre_psi_dev();
 
 private:
   
@@ -37,7 +39,7 @@ private:
 
   double *potential_dev;
 
-  double *cufft_work_dev;
+  double *device_work_dev;
 
   cublasHandle_t cublas_handle;
   int _has_created_cublas_handle;
@@ -55,6 +57,7 @@ private:
   
   const WavepacketsOnSingleDevice *left;
   const WavepacketsOnSingleDevice *right;
+  
   double *omega_wavepacket_from_left_device;
   double *omega_wavepacket_from_right_device;
 
@@ -76,9 +79,7 @@ private:
   void setup_potential_on_device();
   void setup_omega_wavepackets();
 
-  void setup_cufft_work_dev();
-
-  void setup_streams_and_events();
+  void setup_computation_stream_and_event();
   void destroy_streams_and_events();
 };
 

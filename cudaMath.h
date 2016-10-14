@@ -61,35 +61,6 @@ namespace cudaMath {
   { return atomicAdd(*sum, val); }
   
   template<class T1, class T2, class T3> 
-  __global__ void DotProduct(const T1 *r, const T2 *c, T3 *dot, const int size)
-  {
-    extern __shared__ T3 s[];
-    
-    // dot should be zero
-    s[threadIdx.x] = *dot; 
-    const int j = threadIdx.x + blockDim.x*blockIdx.x;
-    if(j < size)
-      s[threadIdx.x] = r[j]*c[j];
-    
-    __syncthreads();
-    
-    // do reduction in shared memory
-    for(int i = blockDim.x/2; i > 0; i /= 2) {
-      if(threadIdx.x < i)
-	s[threadIdx.x] += s[threadIdx.x+i];
-      __syncthreads();
-    }
-    
-    if(threadIdx.x == 0) {
-      //printf("s[0] = %.f\n", s[0]);
-      atomicAdd(dot, s[0]);
-    }
-  }
-  
-  template __global__ 
-  void DotProduct<double, Complex, Complex>(const double *r, const Complex *c, Complex *dot, const int size);
-  
-  template<class T1, class T2, class T3> 
   __global__ void _vector_multiplication_(T1 *vOut, const T2 *vIn1, const T3 *vIn2, const int n)
   {
     const int index = threadIdx.x + blockDim.x*blockIdx.x;
@@ -142,24 +113,6 @@ namespace cudaMath {
     }
   }
   
-  __device__ inline void setup_exp_i_kinetic_dt(Complex *kin, const int n, const double xl, 
-						const double mass, const double dt)
-  {
-    if(n/2*2 != n) return;
-    
-    const double two_pi_xl = 2*Pi/xl;
-    
-    for(int i = threadIdx.x; i < n; i += blockDim.x) {
-      if(i <= n/2) {
-	const double k = sq(two_pi_xl*i)/(mass+mass);
-	kin[i] = exp(Complex(0.0, -dt)*k);
-      } else if(i > n/2) {
-	const double k = sq(two_pi_xl*(-n+i))/(mass+mass);
-	kin[i] = exp(Complex(0.0, -dt)*k);
-      }
-    }
-  }
-
   __device__ inline void setup_moments_of_inertia(double *I, const int n, const double r_left, 
 						  const double dr, const double mass)
   {

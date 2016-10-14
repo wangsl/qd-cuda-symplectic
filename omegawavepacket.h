@@ -15,15 +15,25 @@ public:
 		  cufftHandle &cufft_plan_D2Z,
 		  cufftHandle &cufft_plan_Z2D,
 		  cudaStream_t * &computation_stream,
-		  double * &cufft_work_dev
+		  double * &device_work_dev
 		  );
 
   ~OmegaWavepacket();
 
   void calculate_wavepacket_module();
 
+  void calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev();
+
+  void calculate_T_asym_add_to_T_angle_legendre_psi_dev(const double *psi_dev, 
+							const int omega1) const;
+  
+  void calculate_H_weighted_psi_dev();
+  
   double wavepacket_module() const 
   { return _wavepacket_module_from_real + _wavepacket_module_from_imag; }
+
+  double energy() const
+  { return _energy_from_real + _energy_from_imag; }
 
   double wavepacket_module_legendre() const 
   { return _wavepacket_module_from_real_legendre + _wavepacket_module_from_imag_legendre; }
@@ -34,34 +44,37 @@ public:
   double potential_energy() const
   { return _potential_energy_from_real + _potential_energy_from_imag; }
 
-  void test_parallel();
+  void setup_weighted_psi_dev(const int part);
 
-  void forward_legendre_transform(const int part);
-  void backward_legendre_transform(const int part);
+  void forward_legendre_transform();
+  // void backward_legendre_transform() const;
 
   const double *legendre_psi_dev_() const { return legendre_psi_dev; }
   const int &omega_() const { return omega; }
+
+  void test_parallel();
   
 private:
 
+  const int omega;
+  
   double *weighted_psi_real;
   double *weighted_psi_imag;
-
-  const int omega;
-
-  const double *potential_dev;
   
-  double *weighted_psi_dev;
+  const double *potential_dev;
+  double *work_dev;
+  
   double *weighted_psi_real_dev;
   double *weighted_psi_imag_dev;
   double *weighted_associated_legendres_dev;
-						
-  double *H_weighted_psi_dev;
-  double *H_weighted_legendre_psi_dev;
-
+  
+  double *weighted_psi_dev;
   double *legendre_psi_dev;
 
-  double * &cufft_work_dev;
+  double *T_angle_legendre_psi_dev;
+  double *H_weighted_psi_dev;
+
+  double * &device_work_dev;
 
   cublasHandle_t &cublas_handle;
   cufftHandle &cufft_plan_D2Z;
@@ -70,6 +83,9 @@ private:
 
   double _wavepacket_module_from_real;
   double _wavepacket_module_from_imag;
+
+  double _energy_from_real;
+  double _energy_from_imag;
 
   double _wavepacket_module_from_real_legendre;
   double _wavepacket_module_from_imag_legendre;
@@ -82,25 +98,33 @@ private:
 
   void setup_weighted_psi();
   void copy_weighted_psi_from_host_to_device();
-  void copy_weighted_psi_from_device_to_host();
+  void copy_weighted_psi_from_device_to_host() const;
 
   void copy_weighted_associated_legendres_from_host_to_device();
   
   void setup_legendre_psi_dev();
+  void setup_work_dev();
 
-  //void _calculate_wavepacket_module();
+  void backward_legendre_transform() const;
 
-  void _calculate_kinetic_on_weighted_psi();
-  void _calculate_potential_on_weighted_psi();
+  void calculate_radial_kinetic_add_to_H_weighted_psi_dev() const;
 
-  void cufft_D2Z_for_weighted_psi();
-  void cufft_Z2D_for_weighted_psi();
+  void calculate_potential_add_to_H_weighted_psi_dev() const;
 
-  void forward_legendre_transform();
-  void backward_legendre_transform();
+  void copy_T_angle_legendre_psi_to_device_work_dev();
+  
+  void T_angle_legendre_psi_to_H_weighted_psi_dev();
+
+  void calculate_energy_and_module();
 
   double dot_product_with_volume_element(const double *x_dev, const double *y_dev) const;
-  double dot_product_with_volume_element_legendres(const double *x_dev, const double *y_dev) const;
+  double dot_product_with_volume_element_for_legendres(const double *x_dev, const double *y_dev) const;
+
+  const double *memory_0() const { return weighted_psi_dev; }
+
+  // fixed memory address
+  const double *memory_1() const { return work_dev; }
+  const double *memory_10() const { return device_work_dev; }
 };
 
 #endif /* OMEGA_WAVEPACKET_H */

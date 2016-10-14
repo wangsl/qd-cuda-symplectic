@@ -21,7 +21,6 @@ private:
   
   Vec<WavepacketsOnSingleDevice *> wavepackets_on_single_device;
 
-  // General device functions
   int n_devices() const { return _n_devices; }
 
   void setup_n_devices();
@@ -36,7 +35,8 @@ private:
   void disable_peer_to_peer_access() const;
 
   void setup_devices_neighbours() const;
-  void setup_work_spaces_on_devices() const;
+
+  void setup_device_work_dev_on_devices() const;
 };
 
 #endif /* CUDA_OPENMP_MD_H */
