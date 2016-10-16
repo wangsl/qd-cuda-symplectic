@@ -47,8 +47,8 @@ LIBS = -lifcoremt -L$(CUDA_LIB) -lcufft -lcublas -lcudart #-lmkl_rt
 MEXA64Files = $(O)/cudaSymplectic.mexa64 $(O)/DMBEIVMex.mexa64
 
 CUDAObjs = $(O)/cudaOpenmpMD.o $(O)/cudaUtils.o $(O)/wavepacketson1device.o \
-	$(O)/omegawavepacket.o
-
+	$(O)/omegawavepacket.o 
+ 
 CUDALinkObj = $(O)/cudalink.o
 
 OBJS = $(O)/cudaSymplectic.o  $(O)/matlabUtils.o \
@@ -58,6 +58,7 @@ OBJS = $(O)/cudaSymplectic.o  $(O)/matlabUtils.o \
 	$(O)/matlabData.o \
 	$(O)/die.o  $(O)/indent.o  $(O)/out.o \
 	$(O)/rmatalgo.o  $(O)/rmat.o  $(O)/rmato.o \
+	$(O)/test.o  $(O)/mex2matlab.o \
 	$(CUDAObjs) $(CUDALinkObj)
 
 QMLibs = $(O)/libqmdyn.a

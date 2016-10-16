@@ -11,8 +11,8 @@ export LD_PRELOAD=$LD_PRELOAD:$MKL_LIB/libmkl_intel_ilp64.so:$MKL_LIB/libmkl_cor
 export LD_PRELOAD=$GCC_LIB/libstdc++.so:$LD_PRELOAD
 
 #export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-#export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-export CUDA_VISIBLE_DEVICES="0,1,2"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+#export CUDA_VISIBLE_DEVICES="0,1,2"
 
 if [ "$1" == "-matlab" ]; then
     taskset -c 0-19 matlab > /dev/null 2>&1 

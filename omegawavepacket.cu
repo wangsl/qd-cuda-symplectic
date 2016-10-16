@@ -6,6 +6,7 @@
 #include "cudaUtils.h"
 #include "matlabUtils.h"
 #include "matlabData.h"
+#include "symplecticUtils.h"
 
 #include "evolutionAux.cu"
 
@@ -88,10 +89,12 @@ void OmegaWavepacket::copy_weighted_psi_from_host_to_device()
   
   insist(weighted_psi_real_dev && weighted_psi_imag_dev);
   
-  checkCudaErrors(cudaMemcpyAsync(weighted_psi_real_dev, weighted_psi_real, n1*n2*n_theta*sizeof(double), 
+  checkCudaErrors(cudaMemcpyAsync(weighted_psi_real_dev, weighted_psi_real, 
+				  n1*n2*n_theta*sizeof(double), 
 				  cudaMemcpyHostToDevice));
   
-  checkCudaErrors(cudaMemcpyAsync(weighted_psi_imag_dev, weighted_psi_imag, n1*n2*n_theta*sizeof(double), 
+  checkCudaErrors(cudaMemcpyAsync(weighted_psi_imag_dev, weighted_psi_imag, 
+				  n1*n2*n_theta*sizeof(double), 
 				  cudaMemcpyHostToDevice));
 }
 
@@ -104,10 +107,12 @@ void OmegaWavepacket::copy_weighted_psi_from_device_to_host() const
   insist(weighted_psi_real && weighted_psi_imag);
   insist(weighted_psi_real_dev && weighted_psi_imag_dev);
   
-  checkCudaErrors(cudaMemcpyAsync(weighted_psi_real, weighted_psi_real_dev, n1*n2*n_theta*sizeof(double), 
+  checkCudaErrors(cudaMemcpyAsync(weighted_psi_real, weighted_psi_real_dev, 
+				  n1*n2*n_theta*sizeof(double), 
 				  cudaMemcpyDeviceToHost));
   
-  checkCudaErrors(cudaMemcpyAsync(weighted_psi_imag, weighted_psi_imag_dev, n1*n2*n_theta*sizeof(double), 
+  checkCudaErrors(cudaMemcpyAsync(weighted_psi_imag, weighted_psi_imag_dev, 
+				  n1*n2*n_theta*sizeof(double), 
 				  cudaMemcpyDeviceToHost));
 }
 
@@ -233,9 +238,42 @@ void OmegaWavepacket::calculate_radial_kinetic_add_to_H_weighted_psi_dev() const
 
   n_blocks = cudaUtils::number_of_blocks(n_threads, (n1/2+1)*2*n2*n_theta);
   
-  _add_T_radial_weighted_psi_to_H_weighted_psi_<<<n_blocks, n_threads>>>(H_weighted_psi_dev,
-									 cufft_tmp_dev,
-									 n1, n2, n_theta);
+  _add_T_radial_weighted_psi_to_H_weighted_psi_
+    <<<n_blocks, n_threads>>>(H_weighted_psi_dev, cufft_tmp_dev, n1, n2, n_theta);
+}
+
+void OmegaWavepacket::calculate_radial_kinetic_add_to_H_weighted_psi_dev_2() const
+{
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+
+  insist(H_weighted_psi_dev == memory_1());
+
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+  
+  double *cufft_tmp_dev_0 = const_cast<double *>(memory_10());
+  double *cufft_tmp_dev_1 = cufft_tmp_dev_0 + (n1/2+1)*n2*n_theta*2;
+
+  checkCudaErrors(cudaMemset(cufft_tmp_dev_0, 0, (n1/2+1)*n2*n_theta*2*sizeof(double)));
+  checkCudaErrors(cudaMemset(cufft_tmp_dev_1, 0, n1*n2*n_theta*sizeof(double)));
+  
+  insist(cufftExecD2Z(cufft_plan_D2Z, (cufftDoubleReal *) weighted_psi_dev,
+		      (cufftDoubleComplex *) cufft_tmp_dev_0) == CUFFT_SUCCESS);
+  
+  const int n_threads = _NTHREADS_;
+  int n_blocks = cudaUtils::number_of_blocks(n_threads, (n1/2+1)*n2*n_theta);
+  
+  _psi_times_kinetic_energy_<<<n_blocks, n_threads, (n1/2+1+n2)*sizeof(double)>>>
+    ((Complex *) cufft_tmp_dev_0, (const Complex *) cufft_tmp_dev_0, n1, n2, n_theta);
+  
+  insist(cufftExecZ2D(cufft_plan_Z2D, (cufftDoubleComplex *) cufft_tmp_dev_0,
+		      (cufftDoubleReal *) cufft_tmp_dev_1) == CUFFT_SUCCESS);
+  
+  n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_theta);
+  
+  _add_T_radial_weighted_psi_to_H_weighted_psi_2_
+    <<<n_blocks, n_threads>>>(H_weighted_psi_dev, cufft_tmp_dev_1, n1, n2, n_theta);
 }
 
 void OmegaWavepacket::calculate_potential_add_to_H_weighted_psi_dev() const
@@ -251,8 +289,8 @@ void OmegaWavepacket::calculate_potential_add_to_H_weighted_psi_dev() const
   const int n_threads = _NTHREADS_;
   const int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_theta);
   
-  _add_potential_weighted_psi_to_H_weighted_psi_<<<n_blocks, n_threads>>>(H_weighted_psi_dev, weighted_psi_dev, 
-									  potential_dev, n1*n2*n_theta);
+  _add_potential_weighted_psi_to_H_weighted_psi_<<<n_blocks, n_threads>>>
+    (H_weighted_psi_dev, weighted_psi_dev, potential_dev, n1*n2*n_theta);
 }
 
 void OmegaWavepacket::setup_work_dev()
@@ -325,7 +363,6 @@ void OmegaWavepacket::backward_legendre_transform() const
 void OmegaWavepacket::T_angle_legendre_psi_to_H_weighted_psi_dev()
 {
   insist(T_angle_legendre_psi_dev == memory_10());
-  //insist(H_weighted_psi_dev == memory_1());
 
   H_weighted_psi_dev = const_cast<double *>(memory_1());
   
@@ -422,6 +459,7 @@ void OmegaWavepacket::calculate_T_asym_add_to_T_angle_legendre_psi_dev(const dou
 			   J, omega, omega1);
 }
 
+
 void OmegaWavepacket::calculate_H_weighted_psi_dev()
 {
   copy_T_angle_legendre_psi_to_device_work_dev();
@@ -430,15 +468,20 @@ void OmegaWavepacket::calculate_H_weighted_psi_dev()
 
   T_angle_legendre_psi_to_H_weighted_psi_dev();
 
+  const int &n1 = MatlabData::r1()->n;
+  const int &n2 = MatlabData::r2()->n;
+  const int &n_theta = MatlabData::theta()->n;
+  // checkCudaErrors(cudaMemset(H_weighted_psi_dev, 0, n1*n2*n_theta*sizeof(double)));
+  
   calculate_radial_kinetic_add_to_H_weighted_psi_dev();
-
+  
+  // calculate_radial_kinetic_add_to_H_weighted_psi_dev_2();
+  
   calculate_potential_add_to_H_weighted_psi_dev();
-
-  calculate_energy_and_module();
 }
 
 void OmegaWavepacket::calculate_energy_and_module()
-{
+{   
   insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
   insist(H_weighted_psi_dev == memory_1());
   
@@ -454,37 +497,44 @@ void OmegaWavepacket::calculate_energy_and_module()
   }
 }
 
-void OmegaWavepacket::test_parallel()
+void OmegaWavepacket::propagate_with_symplectic_integrator(const int i_step)
 {
-  insist(cublasSetStream(cublas_handle, NULL) == CUBLAS_STATUS_SUCCESS);
+  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
+  insist(H_weighted_psi_dev == memory_1());
   
-  calculate_wavepacket_module();
-
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
+  const double &dt = MatlabData::time()->time_step;
+  
+  const int &size = SymplecticUtils::coeffients_m6_n4.size;
+  
+  insist(i_step < size);
+  
+  if(i_step == size-1) calculate_energy_and_module();
 
-  H_weighted_psi_dev = const_cast<double *>(memory_1());
-  checkCudaErrors(cudaMemset(H_weighted_psi_dev, 0, n1*n2*n_theta*sizeof(double)));
+  double coeff = 0.0;
 
-  setup_weighted_psi_dev(_RealPart_);
+  if(weighted_psi_dev == weighted_psi_real_dev) {
+    weighted_psi_dev = weighted_psi_imag_dev;
+    coeff = -SymplecticUtils::coeffients_m6_n4.b[i_step];
+  } else {
+    weighted_psi_dev = weighted_psi_real_dev;
+    coeff = SymplecticUtils::coeffients_m6_n4.a[i_step];
+  }
+  
+  coeff *= dt;
 
-  calculate_radial_kinetic_add_to_H_weighted_psi_dev();
-  _kinetic_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
+#if 0
+  const int n_threads = _NTHREADS_;
+  int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_theta);
+  
+  _daxpy_<<<n_blocks, n_threads>>>(weighted_psi_dev, H_weighted_psi_dev, coeff, 1.0, n1*n2*n_theta);
 
-  calculate_potential_add_to_H_weighted_psi_dev();
-  _potential_energy_from_real = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
-  _potential_energy_from_real -= _kinetic_energy_from_real;
+#else
 
-  H_weighted_psi_dev = const_cast<double *>(memory_1());
-  checkCudaErrors(cudaMemset(H_weighted_psi_dev, 0, n1*n2*n_theta*sizeof(double)));
-
-  setup_weighted_psi_dev(_ImagPart_);
-
-  calculate_radial_kinetic_add_to_H_weighted_psi_dev();
-  _kinetic_energy_from_imag = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
-
-  calculate_potential_add_to_H_weighted_psi_dev();
-  _potential_energy_from_imag = dot_product_with_volume_element(weighted_psi_dev, H_weighted_psi_dev);
-  _potential_energy_from_imag -= _kinetic_energy_from_imag;
+  insist(cublasDaxpy(cublas_handle, n1*n2*n_theta, &coeff, 
+		     H_weighted_psi_dev, 1,
+		     weighted_psi_dev, 1) == CUBLAS_STATUS_SUCCESS);
+#endif
 }

@@ -28,6 +28,8 @@ public:
 							const int omega1) const;
   
   void calculate_H_weighted_psi_dev();
+
+  void propagate_with_symplectic_integrator(const int istep);
   
   double wavepacket_module() const 
   { return _wavepacket_module_from_real + _wavepacket_module_from_imag; }
@@ -47,13 +49,12 @@ public:
   void setup_weighted_psi_dev(const int part);
 
   void forward_legendre_transform();
-  // void backward_legendre_transform() const;
+
+  void copy_weighted_psi_from_device_to_host() const;
 
   const double *legendre_psi_dev_() const { return legendre_psi_dev; }
   const int &omega_() const { return omega; }
 
-  void test_parallel();
-  
 private:
 
   const int omega;
@@ -98,7 +99,7 @@ private:
 
   void setup_weighted_psi();
   void copy_weighted_psi_from_host_to_device();
-  void copy_weighted_psi_from_device_to_host() const;
+  // void copy_weighted_psi_from_device_to_host() const;
 
   void copy_weighted_associated_legendres_from_host_to_device();
   
@@ -108,6 +109,8 @@ private:
   void backward_legendre_transform() const;
 
   void calculate_radial_kinetic_add_to_H_weighted_psi_dev() const;
+
+  void calculate_radial_kinetic_add_to_H_weighted_psi_dev_2() const;
 
   void calculate_potential_add_to_H_weighted_psi_dev() const;
 

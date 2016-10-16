@@ -35,24 +35,33 @@ static __global__ void _psi_times_kinetic_energy_(Complex *psi_out, const Comple
   if(index < (n1/2+1)*n2*n_theta) {
     int i = -1; int j = -1; int k = -1;
     cudaMath::index_2_ijk(index, n1/2+1, n2, n_theta, i, j, k);
-    psi_out[index] = psi_in[index]*(kin1[i] + kin2[j]); 
+    psi_out[index] = (kin1[i] + kin2[j])*psi_in[index];
   }
 }
 
 static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_(double *HPsi, const double *TRadPsi,
-								     const int n1, const int n2, const int n_theta)
+								     const int n1, const int n2, 
+								     const int n_theta)
 {
-  const double scale = 1.0/(n1*n2);
-  
   const int index = threadIdx.x + blockDim.x*blockIdx.x;
   if(index < (n1/2+1)*2*n2*n_theta) {
     int i = -1; int j = -1; int k = -1;
     cudaMath::index_2_ijk(index, (n1/2+1)*2, n2, n_theta, i, j, k);
     if(i < n1) {
       const int index2 = cudaMath::ijk_2_index(n1, n2, n_theta, i, j, k);
-      HPsi[index2] += scale*TRadPsi[index];
+      HPsi[index2] += TRadPsi[index]/(n1*n2);
     }
   }
+}
+
+static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_2_(double *HPsi,
+								       const double *TRadPsi,
+								       const int n1, const int n2, 
+								       const int n_theta)
+{
+  const int index = threadIdx.x + blockDim.x*blockIdx.x;
+  if(index < n1*n2*n_theta) 
+    HPsi[index] += TRadPsi[index]/(n1*n2);
 }
 
 static __global__ void _add_potential_weighted_psi_to_H_weighted_psi_(double *HPsi, const double *psi,
@@ -90,7 +99,8 @@ static __global__ void _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_(double *Ta
 }
 
 static __global__ void _add_T_asym_to_T_angle_legendre_psi_dev_(double *TangPsi, const double *psi,
-								const int n1, const int n2, const int nLegs,
+								const int n1, const int n2, 
+								const int nLegs,
 								const int J,
 								const int Omega, const int Omega1)
 {
@@ -108,6 +118,15 @@ static __global__ void _add_T_asym_to_T_angle_legendre_psi_dev_(double *TangPsi,
     TangPsi[index] += I1[i]*c*psi[index];
   }
 }
+
+static __global__ void _daxpy_(double *y, const double *x, const double alpha, const double beta,
+			       const int n)
+{
+  const int index = threadIdx.x + blockDim.x*blockIdx.x;
+  if(index < n)
+    y[index] = alpha*x[index] + beta*y[index];
+}
+
 
 #endif /* EVOLUTION_AUX_H */
 

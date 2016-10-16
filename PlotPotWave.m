@@ -1,14 +1,24 @@
 
 % $Id$
 
-function [] = PlotPotWave(r1, r2, pot, psi)
+function [] = PlotPotWave()
+
+global HO2Data
 
 persistent has_PotWavePlot
 persistent hpsi
 
+theta = HO2Data.theta;
+
+r1 = HO2Data.r1;
+r2 = HO2Data.r2;
+pot = HO2Data.potential;
+
 k = 1;
 
-psiReal= real(psi(:,:,k))';
+psiReal = real(HO2Data.wavepacket_parameters.weighted_wavepackets(: ...
+						  ,:,k,1))/sqrt(theta.w(k));
+psiReal = psiReal';
 
 if isempty(has_PotWavePlot)
   

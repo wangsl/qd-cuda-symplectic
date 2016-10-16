@@ -199,7 +199,7 @@ void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
 
 void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
 {
-  if(cudaUtils::n_devices() == 1) return;
+  // if(cudaUtils::n_devices() == 1) return;
 
   setup_device();
 
@@ -215,10 +215,12 @@ void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
   if(left) size += n1*n2*(l_max+1);
   if(right) size += n1*n2*(l_max+1);
   
-  size = std::max(size, (n1/2+1)*2*n2*n_theta);
+  // size = std::max(size, (n1/2+1)*2*n2*n_theta);
+
+  size = std::max(size, (n1/2+1)*2*n2*n_theta*2);
   
   std::cout << " Setup device work on device: " << current_device_index() 
-	    << " " << size << std::endl;
+	    << " " << size << " " << size*sizeof(double)/pow(1024.0, 2) << std::endl;
 
   checkCudaErrors(cudaMalloc(&device_work_dev, size*sizeof(double)));
   insist(device_work_dev);
@@ -334,16 +336,14 @@ void WavepacketsOnSingleDevice::setup_neighbours(const WavepacketsOnSingleDevice
 void WavepacketsOnSingleDevice::
 forward_legendre_transform_and_copy_data_to_neighbour_devices(const int part)
 { 
-  if(cudaUtils::n_devices() == 1) return;
- 
   insist(part == _RealPart_ || part == _ImagPart_);
+
+  setup_device();
  
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int n_Legs = MatlabData::wavepacket_parameters()->l_max + 1;
   
-  setup_device();
-
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->setup_weighted_psi_dev(part);
   
@@ -415,7 +415,7 @@ void WavepacketsOnSingleDevice::calculate_T_asym_add_to_T_angle_legendre_psi_dev
   
   if(left) {
     insist(left->copy_to_right_stream && left->copy_to_right_event);
-
+    
     checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *left->copy_to_right_event, 0));
     
     omega_wavepackets[0]->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_left_device,
@@ -427,22 +427,21 @@ void WavepacketsOnSingleDevice::calculate_T_asym_add_to_T_angle_legendre_psi_dev
     
     checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *right->copy_to_left_event, 0));
     
-    omega_wavepackets[n_omegas-1]->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_right_device,
-										    omega_wavepackets[n_omegas-1]->omega_()+1);
+    omega_wavepackets[n_omegas-1]->					\
+      calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_right_device,
+						       omega_wavepackets[n_omegas-1]->omega_()+1);
   }
   
   checkCudaErrors(cudaDeviceSynchronize());
   insist(cublasSetStream(cublas_handle, NULL) == CUBLAS_STATUS_SUCCESS);
 }
 
-void WavepacketsOnSingleDevice::test_parallel()
+void WavepacketsOnSingleDevice::calculate_H_weighted_psi_dev(const int part)
 {
   setup_device();
   
-  // real part
-  
-  forward_legendre_transform_and_copy_data_to_neighbour_devices(_RealPart_);
-  
+  forward_legendre_transform_and_copy_data_to_neighbour_devices(part);
+
   for(int i = 0; i < n_omegas; i++)
     omega_wavepackets[i]->calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev();
 
@@ -450,30 +449,34 @@ void WavepacketsOnSingleDevice::test_parallel()
   
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->calculate_H_weighted_psi_dev();
-
-  // imaginary part
-  
-  forward_legendre_transform_and_copy_data_to_neighbour_devices(_ImagPart_);
-
-  for(int i = 0; i < n_omegas; i++)
-    omega_wavepackets[i]->calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev();
-
-  calculate_T_asym_add_to_T_angle_legendre_psi_dev();
-  
-  for(int i = 0; i < n_omegas; i++)
-    omega_wavepackets[i]->calculate_H_weighted_psi_dev();
-  
-  //for(int i = 0; i < n_omegas; i++) 
-  //omega_wavepackets[i]->test_parallel();
 }
 
-void WavepacketsOnSingleDevice::test_serial()
+void WavepacketsOnSingleDevice::propagate_with_symplectic_integrator(const int i_step)
+{
+  calculate_H_weighted_psi_dev(_RealPart_);
+
+  for(int i = 0; i < n_omegas; i++) 
+    omega_wavepackets[i]->propagate_with_symplectic_integrator(i_step);
+
+  calculate_H_weighted_psi_dev(_ImagPart_);
+
+  for(int i = 0; i < n_omegas; i++) 
+    omega_wavepackets[i]->propagate_with_symplectic_integrator(i_step);
+}
+
+void WavepacketsOnSingleDevice::print() const
 {
   setup_device();
-  std::cout << " Test on device: " << current_device_index() << std::endl;
   for(int i = 0; i < n_omegas; i++)
     std::cout << " " << omega_wavepackets[i]->omega_()
 	      << " " << omega_wavepackets[i]->wavepacket_module()
 	      << " " << omega_wavepackets[i]->energy()
 	      << std::endl;
+}
+
+void WavepacketsOnSingleDevice::copy_weighted_psi_from_device_to_host()
+{
+  setup_device();
+  for(int i = 0; i < n_omegas; i++) 
+    omega_wavepackets[i]->copy_weighted_psi_from_device_to_host();
 }

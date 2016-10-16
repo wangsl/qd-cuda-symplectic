@@ -17,17 +17,27 @@ public:
 
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
-  void test_parallel();
-  void test_serial();
+  //void test_parallel();
+  //void test_serial();
+
+  void print() const;
 
   void setup_neighbours(const WavepacketsOnSingleDevice *left, 
 			const WavepacketsOnSingleDevice *right);
 
   void setup_device_work_dev_and_copy_streams_events();
 
-  void forward_legendre_transform_and_copy_data_to_neighbour_devices(const int type);
+  void propagate_with_symplectic_integrator(const int istep);
+
+  void copy_weighted_psi_from_device_to_host();
+
+private:
+
+  void forward_legendre_transform_and_copy_data_to_neighbour_devices(const int part);
 
   void calculate_T_asym_add_to_T_angle_legendre_psi_dev();
+
+  void calculate_H_weighted_psi_dev(const int part);
 
 private:
   

@@ -10,6 +10,7 @@
 #include "matlabData.h"
 
 #include "evolutionUtils.h"
+#include "symplecticUtils.h"
 
 inline static void divide_into_chunks(const int n, const int m, int *chunks)
 {
@@ -186,30 +187,52 @@ void CUDAOpenmpMD::setup_device_work_dev_on_devices() const
     wavepackets_on_single_device[i]->setup_device_work_dev_and_copy_streams_events();
 }
 
+void CUDAOpenmpMD::copy_weighted_psi_from_device_to_host()
+{
+  const int &n = wavepackets_on_single_device.size();
+#pragma omp parallel for default(shared)
+  for(int i = 0; i < n; i++)
+    wavepackets_on_single_device[i]->copy_weighted_psi_from_device_to_host();
+  
+  devices_synchoronize();
+}
+
 void CUDAOpenmpMD::test()
 {
+  omp_set_num_threads(n_devices());
+  
+  const int &size = SymplecticUtils::coeffients_m6_n4.size;
+  
+  int &steps = MatlabData::time()->steps;
   
   for(int L = 0; L < MatlabData::time()->total_steps; L++) {
-
+    
     std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;
-
+    
     checkCudaErrors(cudaProfilerStart());
     
-    omp_set_num_threads(n_devices());
-
-    for(int l = 0; l < 6; l++) {
+    for(int i_step = 0; i_step < size; i_step++) {
 #pragma omp parallel for default(shared)
       for(int i_dev = 0; i_dev < n_devices(); i_dev++)
-	wavepackets_on_single_device[i_dev]->test_parallel();
+	wavepackets_on_single_device[i_dev]->propagate_with_symplectic_integrator(i_step);
     }
-    
-    checkCudaErrors(cudaProfilerStop());
     
     devices_synchoronize();
 
+    checkCudaErrors(cudaProfilerStop());
+    
     for(int i_dev = 0; i_dev < n_devices(); i_dev++)
-      wavepackets_on_single_device[i_dev]->test_serial();
+      wavepackets_on_single_device[i_dev]->print();
+    
+    steps++;
+    
+    if(MatlabData::options()->wave_to_matlab &&
+       steps%MatlabData::options()->steps_to_copy_psi_from_device_to_host == 0) {
+      copy_weighted_psi_from_device_to_host();
+      mex_to_matlab(MatlabData::options()->wave_to_matlab);
+    }
   }
-
   std::cout << std::endl;
 }
+
+  
