@@ -10,6 +10,12 @@
 
 #include "evolutionAux.cu"
 
+/***
+ * https://github.com/mohamso/icpads14
+ * https://raw.githubusercontent.com/mohamso/icpads14/master/4/omp/src/Async.c
+ * DOI: 10.1109/PADSW.2014.7097919
+ ***/
+
 __constant__ EvolutionUtils::RadialCoordinate r1_dev;
 __constant__ EvolutionUtils::RadialCoordinate r2_dev;
 
@@ -181,7 +187,7 @@ void WavepacketsOnSingleDevice::setup_omega_wavepackets()
   omega_wavepackets.resize(n_omegas, 0);
   
   for(int i = 0; i < n_omegas; i++) {
-    omega_wavepackets[i] = new OmegaWavepacket(i+omega_start, potential_dev,
+    omega_wavepackets[i] = new OmegaWavepacket(i+omega_start, potential_dev, 
 					       cublas_handle, cufft_plan_D2Z, cufft_plan_Z2D,
 					       computation_stream,
 					       device_work_dev);
@@ -199,8 +205,6 @@ void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
 
 void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
 {
-  // if(cudaUtils::n_devices() == 1) return;
-
   setup_device();
 
   if(device_work_dev) return;
@@ -215,10 +219,8 @@ void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
   if(left) size += n1*n2*(l_max+1);
   if(right) size += n1*n2*(l_max+1);
   
-  // size = std::max(size, (n1/2+1)*2*n2*n_theta);
+  size = std::max(size, (n1/2+1)*2*n2*n_theta);
 
-  size = std::max(size, (n1/2+1)*2*n2*n_theta*2);
-  
   std::cout << " Setup device work on device: " << current_device_index() 
 	    << " " << size << " " << size*sizeof(double)/pow(1024.0, 2) << std::endl;
 
@@ -350,18 +352,57 @@ forward_legendre_transform_and_copy_data_to_neighbour_devices(const int part)
   insist(computation_stream);
   insist(cublasSetStream(cublas_handle, *computation_stream) == CUBLAS_STATUS_SUCCESS);
 
+  // single omega wavepacket
+
+  if(n_omegas == 1) {
+    
+    OmegaWavepacket *wp = omega_wavepackets[0];
+    wp->forward_legendre_transform();
+    
+    checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
+    
+    if(left) {
+      insist(copy_to_left_stream && copy_to_left_event);
+      
+      checkCudaErrors(cudaStreamWaitEvent(*copy_to_left_stream, *computation_event, 0));
+      
+      checkCudaErrors(cudaMemcpyPeerAsync(left->omega_wavepacket_from_right_device, left->device_index(),
+					  wp->legendre_psi_dev_(), device_index(),
+					  n1*n2*n_Legs*sizeof(double), *copy_to_left_stream));
+      
+      checkCudaErrors(cudaEventRecord(*copy_to_left_event, *copy_to_left_stream));
+    }
+    
+    if(right) {
+      insist(copy_to_right_stream && copy_to_right_event);
+      
+      checkCudaErrors(cudaStreamWaitEvent(*copy_to_right_stream, *computation_event, 0));
+      
+      checkCudaErrors(cudaMemcpyPeerAsync(right->omega_wavepacket_from_left_device, right->device_index(),
+					  wp->legendre_psi_dev_(), device_index(),
+					  n1*n2*n_Legs*sizeof(double), *copy_to_right_stream));
+      
+      checkCudaErrors(cudaEventRecord(*copy_to_right_event, *copy_to_right_stream));
+    }
+    
+    return;
+  }
+  
+  // multiple omege wavepackets
+
   int wp_start = 0;
   int wp_end = n_omegas;
 
   if(left) {
     insist(copy_to_left_stream && copy_to_left_event);
-
+    
     OmegaWavepacket *wp = omega_wavepackets[0];
     wp->forward_legendre_transform();
     
-    checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
+    checkCudaErrors(cudaStreamSynchronize(*computation_stream));
+    // checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
 
-    checkCudaErrors(cudaStreamWaitEvent(*copy_to_left_stream, *computation_event, 0));
+    //checkCudaErrors(cudaStreamWaitEvent(*copy_to_left_stream, *computation_event, 0));
     
     checkCudaErrors(cudaMemcpyPeerAsync(left->omega_wavepacket_from_right_device, left->device_index(),
 					wp->legendre_psi_dev_(), device_index(),
@@ -377,10 +418,11 @@ forward_legendre_transform_and_copy_data_to_neighbour_devices(const int part)
     
     OmegaWavepacket *wp = omega_wavepackets[n_omegas-1];
     wp->forward_legendre_transform();
-
-    checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
-
-    checkCudaErrors(cudaStreamWaitEvent(*copy_to_right_stream, *computation_event, 0));
+    
+    // checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
+    // checkCudaErrors(cudaStreamWaitEvent(*copy_to_right_stream, *computation_event, 0));
+    
+    checkCudaErrors(cudaStreamSynchronize(*computation_stream));
     
     checkCudaErrors(cudaMemcpyPeerAsync(right->omega_wavepacket_from_left_device, right->device_index(),
 					wp->legendre_psi_dev_(), device_index(),
@@ -390,13 +432,15 @@ forward_legendre_transform_and_copy_data_to_neighbour_devices(const int part)
     
     wp_end = n_omegas - 1;
   }
-
+  
   for(int i = wp_start; i < wp_end; i++) 
     omega_wavepackets[i]->forward_legendre_transform();
 }
 
 void WavepacketsOnSingleDevice::calculate_T_asym_add_to_T_angle_legendre_psi_dev()
 {
+  setup_device();
+
   const OmegaWavepacket *wp = 0;
 
   for(int i = 0; i < n_omegas; i++) {
@@ -412,28 +456,22 @@ void WavepacketsOnSingleDevice::calculate_T_asym_add_to_T_angle_legendre_psi_dev
 									     wp->omega_());
     }
   }
-  
+
   if(left) {
     insist(left->copy_to_right_stream && left->copy_to_right_event);
-    
     checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *left->copy_to_right_event, 0));
-    
-    omega_wavepackets[0]->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_left_device,
-									   omega_wavepackets[0]->omega_()-1);
+    wp = omega_wavepackets[0];
+    wp->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_left_device,
+							 wp->omega_()-1);
   }
   
   if(right) {
     insist(right->copy_to_left_stream && right->copy_to_left_event);
-    
     checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *right->copy_to_left_event, 0));
-    
-    omega_wavepackets[n_omegas-1]->					\
-      calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_right_device,
-						       omega_wavepackets[n_omegas-1]->omega_()+1);
+    wp = omega_wavepackets[n_omegas-1];
+    wp->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_right_device,
+							 wp->omega_()+1);
   }
-  
-  checkCudaErrors(cudaDeviceSynchronize());
-  insist(cublasSetStream(cublas_handle, NULL) == CUBLAS_STATUS_SUCCESS);
 }
 
 void WavepacketsOnSingleDevice::calculate_H_weighted_psi_dev(const int part)
@@ -442,10 +480,17 @@ void WavepacketsOnSingleDevice::calculate_H_weighted_psi_dev(const int part)
   
   forward_legendre_transform_and_copy_data_to_neighbour_devices(part);
 
+  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
+
   for(int i = 0; i < n_omegas; i++)
     omega_wavepackets[i]->calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev();
 
+  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
+
   calculate_T_asym_add_to_T_angle_legendre_psi_dev();
+  
+  checkCudaErrors(cudaDeviceSynchronize());
+  insist(cublasSetStream(cublas_handle, NULL) == CUBLAS_STATUS_SUCCESS);
   
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->calculate_H_weighted_psi_dev();
@@ -453,25 +498,35 @@ void WavepacketsOnSingleDevice::calculate_H_weighted_psi_dev(const int part)
 
 void WavepacketsOnSingleDevice::propagate_with_symplectic_integrator(const int i_step)
 {
+  setup_device();
+
   calculate_H_weighted_psi_dev(_RealPart_);
 
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->propagate_with_symplectic_integrator(i_step);
 
+#pragma omp barrier
+  
   calculate_H_weighted_psi_dev(_ImagPart_);
-
+  
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->propagate_with_symplectic_integrator(i_step);
 }
 
-void WavepacketsOnSingleDevice::print() const
+void WavepacketsOnSingleDevice::print()
 {
   setup_device();
-  for(int i = 0; i < n_omegas; i++)
+  _module = 0.0;
+  _total_energy = 0.0;
+  for(int i = 0; i < n_omegas; i++) {
+    _module += omega_wavepackets[i]->wavepacket_module();
+    _total_energy += omega_wavepackets[i]->energy();
+    
     std::cout << " " << omega_wavepackets[i]->omega_()
 	      << " " << omega_wavepackets[i]->wavepacket_module()
 	      << " " << omega_wavepackets[i]->energy()
 	      << std::endl;
+  }
 }
 
 void WavepacketsOnSingleDevice::copy_weighted_psi_from_device_to_host()
@@ -479,4 +534,11 @@ void WavepacketsOnSingleDevice::copy_weighted_psi_from_device_to_host()
   setup_device();
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->copy_weighted_psi_from_device_to_host();
+}
+
+void WavepacketsOnSingleDevice::dump_wavepackets() const
+{
+  setup_device();
+  for(int i = 0; i < n_omegas; i++) 
+    omega_wavepackets[i]->dump_wavepacket();
 }

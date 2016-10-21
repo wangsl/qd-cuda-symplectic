@@ -17,10 +17,7 @@ public:
 
   ~WavepacketsOnSingleDevice() { destroy_data_on_device(); }
 
-  //void test_parallel();
-  //void test_serial();
-
-  void print() const;
+  void print();
 
   void setup_neighbours(const WavepacketsOnSingleDevice *left, 
 			const WavepacketsOnSingleDevice *right);
@@ -30,6 +27,11 @@ public:
   void propagate_with_symplectic_integrator(const int istep);
 
   void copy_weighted_psi_from_device_to_host();
+
+  void dump_wavepackets() const;
+
+  double module() const { return _module; }
+  double total_energy() const { return _total_energy; }
 
 private:
 
@@ -71,6 +73,9 @@ private:
   double *omega_wavepacket_from_left_device;
   double *omega_wavepacket_from_right_device;
 
+  double _module;
+  double _total_energy;
+  
   int device_index() const { return _device_index; }
   int current_device_index() const;
   void setup_device() const;

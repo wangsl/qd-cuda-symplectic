@@ -20,10 +20,10 @@ fprintf(' Gaussian wavepacket module: %.15f\n', sum(conj(G).*G)*R1.dr);
 %fprintf(' O2 vibrational energy: %.14f\n', eO2);
 %fprintf(' O2 vibrational wavefunction module: %.14f\n', sum(phiO2.^2)*R2.dr);
 
-P = NormalizedLegendreP(jRot, Theta.x);
+%P = NormalizedLegendreP(jRot, Theta.x);
 
-%P = legendre(jRot, Theta.x, 'norm');
-%P = P(3, :);
+P = legendre(jRot, Theta.x, 'norm');
+P = P(2, :);
 
 fprintf(' Legendre polynomail module: %.15f\n', sum(P.^2.*Theta.w));
 

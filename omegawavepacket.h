@@ -11,6 +11,7 @@ public:
 
   OmegaWavepacket(int omega,
 		  const double *potential_dev, 
+		  // int * &potential_scale_dev,
 		  cublasHandle_t &cublas_handle,
 		  cufftHandle &cufft_plan_D2Z,
 		  cufftHandle &cufft_plan_Z2D,
@@ -30,6 +31,8 @@ public:
   void calculate_H_weighted_psi_dev();
 
   void propagate_with_symplectic_integrator(const int istep);
+
+  void dump_wavepacket() const;
   
   double wavepacket_module() const 
   { return _wavepacket_module_from_real + _wavepacket_module_from_imag; }
@@ -63,6 +66,7 @@ private:
   double *weighted_psi_imag;
   
   const double *potential_dev;
+  // int * &potential_scale_dev;
   double *work_dev;
   
   double *weighted_psi_real_dev;

@@ -54,6 +54,7 @@ static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_(double *HPs
   }
 }
 
+/*
 static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_2_(double *HPsi,
 								       const double *TRadPsi,
 								       const int n1, const int n2, 
@@ -63,6 +64,7 @@ static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_2_(double *H
   if(index < n1*n2*n_theta) 
     HPsi[index] += TRadPsi[index]/(n1*n2);
 }
+*/
 
 static __global__ void _add_potential_weighted_psi_to_H_weighted_psi_(double *HPsi, const double *psi,
 								      const double *pot, const int n)
@@ -119,6 +121,17 @@ static __global__ void _add_T_asym_to_T_angle_legendre_psi_dev_(double *TangPsi,
   }
 }
 
+static __global__ void _dump_wavepacket_(double *psi, const int n1, const int n2, const int n_theta)
+{
+  const int index = threadIdx.x + blockDim.x*blockIdx.x;
+  
+  if(index < n1*n2*n_theta) {
+    int i = -1; int j = -1; int k = -1;
+    cudaMath::index_2_ijk(index, n1, n2, n_theta, i, j, k);
+    psi[index] *= r1_dev.dump[i]*r2_dev.dump[j];
+  }
+}
+
 static __global__ void _daxpy_(double *y, const double *x, const double alpha, const double beta,
 			       const int n)
 {
@@ -127,6 +140,22 @@ static __global__ void _daxpy_(double *y, const double *x, const double alpha, c
     y[index] = alpha*x[index] + beta*y[index];
 }
 
+static __global__ void _setup_potential_scale_(int *scale, const double *pot_dev,
+					       const double cutoff, const int n)
+{
+  const int index = threadIdx.x + blockDim.x*blockIdx.x;
+  if(index < n) 
+    scale[index] = pot_dev[index] < cutoff ? 1 : 0;
+}
+
+
+static __global__ void _scale_wavepacket_with_potential_cutoff_(double *psi, const double *potential,
+								const double cutoff, const int n)
+{
+  const int index = threadIdx.x + blockDim.x*blockIdx.x;
+  if(index < n)
+    if(potential[index] > cutoff) psi[index] = 0.0;
+}
 
 #endif /* EVOLUTION_AUX_H */
 

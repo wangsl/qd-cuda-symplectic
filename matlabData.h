@@ -29,11 +29,6 @@ namespace MatlabData
   WavepacketParameters *wavepacket_parameters();
   void wavepacket_parameters(WavepacketParameters *params);
 
-#if 0
-  OmegaStates *omega_states();
-  void omega_states(OmegaStates *om);
-#endif
-
   void check_data();
   void destroy_all_data();
 };

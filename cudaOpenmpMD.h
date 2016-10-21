@@ -39,6 +39,8 @@ private:
   void setup_device_work_dev_on_devices() const;
 
   void copy_weighted_psi_from_device_to_host();
+
+  void dump_wavepackets() const;
 };
 
 #endif /* CUDA_OPENMP_MD_H */

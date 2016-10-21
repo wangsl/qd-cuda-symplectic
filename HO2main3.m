@@ -30,7 +30,7 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(50000);
+time.total_steps = int32(1000000);
 time.time_step = 1.0; %0.5;
 time.steps = int32(0);
 
@@ -42,7 +42,7 @@ r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
 r1.mass = masses(1)*(masses(2)+masses(3))/(masses(1)+masses(2)+ ...
 					   masses(3));
-%r1.dump = WoodsSaxon(4.0, 14.5, r1.r);
+r1.dump = WoodsSaxon(4.0, 14.5, r1.r);
 
 r1.r0 = 10.0;
 r1.k0 = 0.35;
@@ -65,7 +65,7 @@ r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
 r2.mass = masses(2)*masses(3)/(masses(2)+masses(3));
 
-% r2.dump = WoodsSaxon(4.0, 10.0, r2.r);
+r2.dump = WoodsSaxon(4.0, 10.0, r2.r);
 
 % dividing surface
 

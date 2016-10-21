@@ -113,6 +113,9 @@ void CUDAOpenmpMD::setup_wavepackets_on_single_device()
   setup_device_work_dev_on_devices();
 
   devices_synchoronize();
+
+  // setup_potential_scale_on_devices();
+  
   devices_memory_usage();
 }
 
@@ -197,6 +200,18 @@ void CUDAOpenmpMD::copy_weighted_psi_from_device_to_host()
   devices_synchoronize();
 }
 
+void CUDAOpenmpMD::dump_wavepackets() const
+{
+  if(!MatlabData::dump_wavepacket()) return;
+
+  std::cout << " Dump wavepackets" << std::endl;
+
+  const int &n = wavepackets_on_single_device.size();
+#pragma omp parallel for default(shared)
+  for(int i = 0; i < n; i++)
+    wavepackets_on_single_device[i]->dump_wavepackets();
+}
+
 void CUDAOpenmpMD::test()
 {
   omp_set_num_threads(n_devices());
@@ -210,19 +225,26 @@ void CUDAOpenmpMD::test()
     std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;
     
     checkCudaErrors(cudaProfilerStart());
+
+    dump_wavepackets();
     
     for(int i_step = 0; i_step < size; i_step++) {
 #pragma omp parallel for default(shared)
       for(int i_dev = 0; i_dev < n_devices(); i_dev++)
 	wavepackets_on_single_device[i_dev]->propagate_with_symplectic_integrator(i_step);
+      devices_synchoronize();
     }
     
-    devices_synchoronize();
-
     checkCudaErrors(cudaProfilerStop());
     
-    for(int i_dev = 0; i_dev < n_devices(); i_dev++)
+    double module = 0.0;
+    double energy = 0.0;
+    for(int i_dev = 0; i_dev < n_devices(); i_dev++) {
       wavepackets_on_single_device[i_dev]->print();
+      module += wavepackets_on_single_device[i_dev]->module();
+      energy += wavepackets_on_single_device[i_dev]->total_energy();
+    }
+    std::cout << " T " << module << " " << energy << std::endl;
     
     steps++;
     

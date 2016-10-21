@@ -1,5 +1,5 @@
 
-/* created at: 2016-10-08 14:30:44 */
+/* created at: 2016-10-18 21:45:16 */
 
 #include <iostream>
 using namespace std;
@@ -73,6 +73,7 @@ void Options::write_fields(ostream &s) const
   if (wave_to_matlab)
     s << Indent() << "wave_to_matlab " << wave_to_matlab << "\n";
   s << Indent() << "steps_to_copy_psi_from_device_to_host " << steps_to_copy_psi_from_device_to_host << "\n";
+  s << Indent() << "potential_cutoff " << potential_cutoff << "\n";
 }
 
 ostream & operator <<(ostream &s, const WavepacketParameters &c)

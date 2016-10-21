@@ -14,10 +14,12 @@ r1 = HO2Data.r1;
 r2 = HO2Data.r2;
 pot = HO2Data.potential;
 
-k = 1;
+omega = 2;
 
-psiReal = real(HO2Data.wavepacket_parameters.weighted_wavepackets(: ...
-						  ,:,k,1))/sqrt(theta.w(k));
+k = 20;
+
+psiReal = real(HO2Data.wavepacket_parameters.weighted_wavepackets(:, ...
+						  :, k, omega))/sqrt(theta.w(k));
 psiReal = psiReal';
 
 if isempty(has_PotWavePlot)

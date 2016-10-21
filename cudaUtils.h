@@ -8,6 +8,7 @@
 #define _CUDA_FREE_(x) if(x) { checkCudaErrors(cudaFree(x)); x = 0; }
 
 #define _NTHREADS_ 512
+#define _POTENTIAL_CUTOFF_ -1.0e+6
 
 namespace cudaUtils {
   

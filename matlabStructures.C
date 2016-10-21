@@ -42,7 +42,8 @@ EvolutionTime::EvolutionTime(const mxArray *mx) :
 Options::Options(const mxArray *mx) :
   mx(mx),
   wave_to_matlab(0),
-  steps_to_copy_psi_from_device_to_host(*(int *) mxGetData(mx, "steps_to_copy_psi_from_device_to_host", _mxInt32_))
+  steps_to_copy_psi_from_device_to_host(*(int *) mxGetData(mx, "steps_to_copy_psi_from_device_to_host", _mxInt32_)),
+  potential_cutoff(*(double *) mxGetData(mx, "potential_cutoff"))
 {
   wave_to_matlab = mxGetString(mx, "wave_to_matlab");
   if(wave_to_matlab)
