@@ -26,6 +26,7 @@ CUDAOpenmpMD::CUDAOpenmpMD() :
   setup_n_devices();
   setup_wavepackets_on_single_device();
   enable_peer_to_peer_access();
+  devices_memory_usage();
 }
 
 CUDAOpenmpMD::~CUDAOpenmpMD() 
@@ -113,10 +114,6 @@ void CUDAOpenmpMD::setup_wavepackets_on_single_device()
   setup_device_work_dev_on_devices();
 
   devices_synchoronize();
-
-  // setup_potential_scale_on_devices();
-  
-  devices_memory_usage();
 }
 
 void CUDAOpenmpMD::destroy_wavepackets_on_single_device()
@@ -225,7 +222,7 @@ void CUDAOpenmpMD::test()
     std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;
     
     checkCudaErrors(cudaProfilerStart());
-
+    
     dump_wavepackets();
     
     for(int i_step = 0; i_step < size; i_step++) {

@@ -8,7 +8,7 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 1;
+jRot = 3;
 nVib = 0;
 %end
 
@@ -98,8 +98,8 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 3;
-parity = 0;
+J = 4;
+parity = 1;
 lMax = 120;
 
 wavepacket_parameters.J = int32(J);

@@ -12,7 +12,6 @@
 
 OmegaWavepacket::OmegaWavepacket(int omega_,
 				 const double *potential_dev_, 
-				 // int * &potential_scale_dev_,
 				 cublasHandle_t &cublas_handle_,
 				 cufftHandle &cufft_plan_D2Z_,
 				 cufftHandle &cufft_plan_Z2D_,
@@ -21,7 +20,6 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
 				 ) :
   omega(omega_), 
   potential_dev(potential_dev_),
-  // potential_scale_dev(potential_scale_dev_),
   cublas_handle(cublas_handle_), 
   cufft_plan_D2Z(cufft_plan_D2Z_),
   cufft_plan_Z2D(cufft_plan_Z2D_),
@@ -246,42 +244,6 @@ void OmegaWavepacket::calculate_radial_kinetic_add_to_H_weighted_psi_dev() const
     <<<n_blocks, n_threads>>>(H_weighted_psi_dev, cufft_tmp_dev, n1, n2, n_theta);
 }
 
-/*
-void OmegaWavepacket::calculate_radial_kinetic_add_to_H_weighted_psi_dev_2() const
-{
-  insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
-
-  insist(H_weighted_psi_dev == memory_1());
-
-  const int &n1 = MatlabData::r1()->n;
-  const int &n2 = MatlabData::r2()->n;
-  const int &n_theta = MatlabData::theta()->n;
-  
-  double *cufft_tmp_dev_0 = const_cast<double *>(memory_10());
-  double *cufft_tmp_dev_1 = cufft_tmp_dev_0 + (n1/2+1)*n2*n_theta*2;
-
-  checkCudaErrors(cudaMemset(cufft_tmp_dev_0, 0, (n1/2+1)*n2*n_theta*2*sizeof(double)));
-  checkCudaErrors(cudaMemset(cufft_tmp_dev_1, 0, n1*n2*n_theta*sizeof(double)));
-  
-  insist(cufftExecD2Z(cufft_plan_D2Z, (cufftDoubleReal *) weighted_psi_dev,
-		      (cufftDoubleComplex *) cufft_tmp_dev_0) == CUFFT_SUCCESS);
-  
-  const int n_threads = _NTHREADS_;
-  int n_blocks = cudaUtils::number_of_blocks(n_threads, (n1/2+1)*n2*n_theta);
-  
-  _psi_times_kinetic_energy_<<<n_blocks, n_threads, (n1/2+1+n2)*sizeof(double)>>>
-    ((Complex *) cufft_tmp_dev_0, (const Complex *) cufft_tmp_dev_0, n1, n2, n_theta);
-  
-  insist(cufftExecZ2D(cufft_plan_Z2D, (cufftDoubleComplex *) cufft_tmp_dev_0,
-		      (cufftDoubleReal *) cufft_tmp_dev_1) == CUFFT_SUCCESS);
-  
-  n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_theta);
-  
-  _add_T_radial_weighted_psi_to_H_weighted_psi_2_
-    <<<n_blocks, n_threads>>>(H_weighted_psi_dev, cufft_tmp_dev_1, n1, n2, n_theta);
-}
-*/
-
 void OmegaWavepacket::calculate_potential_add_to_H_weighted_psi_dev() const
 {
   insist(weighted_psi_dev == weighted_psi_real_dev || weighted_psi_dev == weighted_psi_imag_dev);
@@ -447,24 +409,21 @@ void OmegaWavepacket::calculate_T_asym_add_to_T_angle_legendre_psi_dev(const dou
   const int &n2 = MatlabData::r2()->n;
   const int &J = MatlabData::wavepacket_parameters()->J;
   
-  // need to check this part
-  const int omega_ = std::max(omega, omega1);
-  // const int omega_ = std::min(omega, omega1);
+  const int omega_max = std::max(omega, omega1);
   
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega_ + 1;
+  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega_max + 1;
 
-  double *T_angle_legendre_psi_dev_ = T_angle_legendre_psi_dev + omega_*n1*n2;
-  const double *legendre_psi_dev_ = psi_dev + omega_*n1*n2;
+  double *T_angle_legendre_psi_dev_ = T_angle_legendre_psi_dev + omega_max*n1*n2;
+  const double *legendre_psi_dev_ = psi_dev + omega_max*n1*n2;
   
   const int n_threads = _NTHREADS_;
   int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_Legs);
-
+  
   insist(computation_stream);
   
   _add_T_asym_to_T_angle_legendre_psi_dev_<<<n_blocks, n_threads, n1*sizeof(double),
     *computation_stream>>>(T_angle_legendre_psi_dev_, legendre_psi_dev_,
-			   n1, n2, n_Legs,
-			   J, omega, omega1);
+			   n1, n2, n_Legs, J, omega, omega1, omega_max);
 }
 
 

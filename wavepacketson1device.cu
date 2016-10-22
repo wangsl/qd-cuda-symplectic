@@ -214,26 +214,28 @@ void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
   const int &n_theta = MatlabData::theta()->n;
   const int &l_max = MatlabData::wavepacket_parameters()->l_max;
   
-  int size = 0;
+  long size = 0;
 
   if(left) size += n1*n2*(l_max+1);
   if(right) size += n1*n2*(l_max+1);
   
-  size = std::max(size, (n1/2+1)*2*n2*n_theta);
+  size = std::max(size, (n1/2+1)*2L*n2*n_theta);
 
   std::cout << " Setup device work on device: " << current_device_index() 
-	    << " " << size << " " << size*sizeof(double)/pow(1024.0, 2) << std::endl;
+	    << " " << size << " " << size*sizeof(double)/1024.0/1024.0 << std::endl;
 
   checkCudaErrors(cudaMalloc(&device_work_dev, size*sizeof(double)));
   insist(device_work_dev);
 
-  int current = 0;
+  long current = 0;
 
   if(left) {
     if(!omega_wavepacket_from_left_device) {
-      std::cout << " Setup wavepacket from left on device: " << current_device_index() << std::endl;
       omega_wavepacket_from_left_device = device_work_dev + current;
       current += n1*n2*(l_max+1);
+
+      std::cout << " Setup wavepacket from left on device: " << current_device_index() 
+		<< " " << omega_wavepacket_from_left_device << std::endl;
 
       if(!copy_to_left_stream) { 
 	copy_to_left_stream = (cudaStream_t *) malloc(sizeof(cudaStream_t));
@@ -244,16 +246,19 @@ void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
       if(!copy_to_left_event) {
 	copy_to_left_event = (cudaEvent_t *) malloc(sizeof(cudaEvent_t));
 	insist(copy_to_left_event);
-	checkCudaErrors(cudaEventCreateWithFlags(copy_to_left_event, cudaEventDisableTiming));
+	// checkCudaErrors(cudaEventCreateWithFlags(copy_to_left_event, cudaEventDisableTiming));
+	checkCudaErrors(cudaEventCreateWithFlags(copy_to_left_event, cudaEventBlockingSync));
       }
     }
   }
 
   if(right) {
     if(!omega_wavepacket_from_right_device) {
-      std::cout << " Setup wavepacket from right on device: " << current_device_index() << std::endl;
       omega_wavepacket_from_right_device = device_work_dev + current;
       current += n1*n2*(l_max+1);
+      
+      std::cout << " Setup wavepacket from right on device: " << current_device_index() 
+		<< " " << omega_wavepacket_from_right_device << std::endl;
       
       if(!copy_to_right_stream) { 
 	copy_to_right_stream = (cudaStream_t *) malloc(sizeof(cudaStream_t));
@@ -264,7 +269,8 @@ void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
       if(!copy_to_right_event) {
 	copy_to_right_event = (cudaEvent_t *) malloc(sizeof(cudaEvent_t));
 	insist(copy_to_right_event);
-	checkCudaErrors(cudaEventCreateWithFlags(copy_to_right_event, cudaEventDisableTiming));
+	// checkCudaErrors(cudaEventCreateWithFlags(copy_to_right_event, cudaEventDisableTiming));
+	checkCudaErrors(cudaEventCreateWithFlags(copy_to_right_event, cudaEventBlockingSync));
       }
     }
   }
@@ -285,7 +291,8 @@ void WavepacketsOnSingleDevice::setup_computation_stream_and_event()
   
   computation_event = (cudaEvent_t *) malloc(sizeof(cudaEvent_t));
   insist(computation_event);
-  checkCudaErrors(cudaEventCreate(computation_event));
+  //checkCudaErrors(cudaEventCreateWithFlags(computation_event, cudaEventDisableTiming));
+  checkCudaErrors(cudaEventCreateWithFlags(computation_event, cudaEventBlockingSync));
 }
   
 void WavepacketsOnSingleDevice::destroy_streams_and_events()
@@ -341,100 +348,16 @@ forward_legendre_transform_and_copy_data_to_neighbour_devices(const int part)
   insist(part == _RealPart_ || part == _ImagPart_);
 
   setup_device();
- 
-  const int &n1 = MatlabData::r1()->n;
-  const int &n2 = MatlabData::r2()->n;
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max + 1;
-  
-  for(int i = 0; i < n_omegas; i++) 
-    omega_wavepackets[i]->setup_weighted_psi_dev(part);
-  
+
   insist(computation_stream);
   insist(cublasSetStream(cublas_handle, *computation_stream) == CUBLAS_STATUS_SUCCESS);
 
-  // single omega wavepacket
-
-  if(n_omegas == 1) {
-    
-    OmegaWavepacket *wp = omega_wavepackets[0];
-    wp->forward_legendre_transform();
-    
-    checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
-    
-    if(left) {
-      insist(copy_to_left_stream && copy_to_left_event);
-      
-      checkCudaErrors(cudaStreamWaitEvent(*copy_to_left_stream, *computation_event, 0));
-      
-      checkCudaErrors(cudaMemcpyPeerAsync(left->omega_wavepacket_from_right_device, left->device_index(),
-					  wp->legendre_psi_dev_(), device_index(),
-					  n1*n2*n_Legs*sizeof(double), *copy_to_left_stream));
-      
-      checkCudaErrors(cudaEventRecord(*copy_to_left_event, *copy_to_left_stream));
-    }
-    
-    if(right) {
-      insist(copy_to_right_stream && copy_to_right_event);
-      
-      checkCudaErrors(cudaStreamWaitEvent(*copy_to_right_stream, *computation_event, 0));
-      
-      checkCudaErrors(cudaMemcpyPeerAsync(right->omega_wavepacket_from_left_device, right->device_index(),
-					  wp->legendre_psi_dev_(), device_index(),
-					  n1*n2*n_Legs*sizeof(double), *copy_to_right_stream));
-      
-      checkCudaErrors(cudaEventRecord(*copy_to_right_event, *copy_to_right_stream));
-    }
-    
-    return;
-  }
-  
-  // multiple omege wavepackets
-
-  int wp_start = 0;
-  int wp_end = n_omegas;
-
-  if(left) {
-    insist(copy_to_left_stream && copy_to_left_event);
-    
-    OmegaWavepacket *wp = omega_wavepackets[0];
-    wp->forward_legendre_transform();
-    
-    checkCudaErrors(cudaStreamSynchronize(*computation_stream));
-    // checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
-
-    //checkCudaErrors(cudaStreamWaitEvent(*copy_to_left_stream, *computation_event, 0));
-    
-    checkCudaErrors(cudaMemcpyPeerAsync(left->omega_wavepacket_from_right_device, left->device_index(),
-					wp->legendre_psi_dev_(), device_index(),
-					n1*n2*n_Legs*sizeof(double), *copy_to_left_stream));
-    
-    checkCudaErrors(cudaEventRecord(*copy_to_left_event, *copy_to_left_stream));
-    
-    wp_start = 1;
-  }
-
-  if(right) {
-    insist(copy_to_right_stream && copy_to_right_event);
-    
-    OmegaWavepacket *wp = omega_wavepackets[n_omegas-1];
-    wp->forward_legendre_transform();
-    
-    // checkCudaErrors(cudaEventRecord(*computation_event, *computation_stream));
-    // checkCudaErrors(cudaStreamWaitEvent(*copy_to_right_stream, *computation_event, 0));
-    
-    checkCudaErrors(cudaStreamSynchronize(*computation_stream));
-    
-    checkCudaErrors(cudaMemcpyPeerAsync(right->omega_wavepacket_from_left_device, right->device_index(),
-					wp->legendre_psi_dev_(), device_index(),
-					n1*n2*n_Legs*sizeof(double), *copy_to_right_stream));
-    
-    checkCudaErrors(cudaEventRecord(*copy_to_right_event, *copy_to_right_stream));
-    
-    wp_end = n_omegas - 1;
-  }
-  
-  for(int i = wp_start; i < wp_end; i++) 
+  for(int i = 0; i < n_omegas; i++) {
+    omega_wavepackets[i]->setup_weighted_psi_dev(part);
     omega_wavepackets[i]->forward_legendre_transform();
+  }
+
+  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
 }
 
 void WavepacketsOnSingleDevice::calculate_T_asym_add_to_T_angle_legendre_psi_dev()
@@ -457,37 +380,46 @@ void WavepacketsOnSingleDevice::calculate_T_asym_add_to_T_angle_legendre_psi_dev
     }
   }
 
-  if(left) {
-    insist(left->copy_to_right_stream && left->copy_to_right_event);
-    checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *left->copy_to_right_event, 0));
-    wp = omega_wavepackets[0];
-    wp->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_left_device,
-							 wp->omega_()-1);
-  }
+#pragma omp barrier
+
+  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
   
   if(right) {
-    insist(right->copy_to_left_stream && right->copy_to_left_event);
-    checkCudaErrors(cudaStreamWaitEvent(*computation_stream, *right->copy_to_left_event, 0));
     wp = omega_wavepackets[n_omegas-1];
-    wp->calculate_T_asym_add_to_T_angle_legendre_psi_dev(omega_wavepacket_from_right_device,
-							 wp->omega_()+1);
+    wp->calculate_T_asym_add_to_T_angle_legendre_psi_dev(right->omega_wavepackets[0]->legendre_psi_dev_(),
+							 right->omega_wavepackets[0]->omega_());
+    
   }
+  
+#pragma omp barrier
+
+  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
+  
+  if(left) {
+    wp = omega_wavepackets[0];
+    wp->calculate_T_asym_add_to_T_angle_legendre_psi_dev(left->omega_wavepackets_right()->legendre_psi_dev_(),
+							 left->omega_wavepackets_right()->omega_());
+  }
+
+#pragma omp barrier
+  
+  checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void WavepacketsOnSingleDevice::calculate_H_weighted_psi_dev(const int part)
 {
-  setup_device();
-  
   forward_legendre_transform_and_copy_data_to_neighbour_devices(part);
 
-  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
-
+#pragma omp barrier
+  
   for(int i = 0; i < n_omegas; i++)
     omega_wavepackets[i]->calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev();
 
-  checkCudaErrors(cudaStreamSynchronize(*computation_stream));
-
+#pragma omp barrier
+  
   calculate_T_asym_add_to_T_angle_legendre_psi_dev();
+
+#pragma omp barrier
   
   checkCudaErrors(cudaDeviceSynchronize());
   insist(cublasSetStream(cublas_handle, NULL) == CUBLAS_STATUS_SUCCESS);
@@ -498,12 +430,16 @@ void WavepacketsOnSingleDevice::calculate_H_weighted_psi_dev(const int part)
 
 void WavepacketsOnSingleDevice::propagate_with_symplectic_integrator(const int i_step)
 {
+#pragma omp barrier
+  
   setup_device();
 
   calculate_H_weighted_psi_dev(_RealPart_);
 
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->propagate_with_symplectic_integrator(i_step);
+
+  checkCudaErrors(cudaDeviceSynchronize());
 
 #pragma omp barrier
   
@@ -542,3 +478,4 @@ void WavepacketsOnSingleDevice::dump_wavepackets() const
   for(int i = 0; i < n_omegas; i++) 
     omega_wavepackets[i]->dump_wavepacket();
 }
+

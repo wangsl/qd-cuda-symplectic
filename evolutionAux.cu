@@ -54,18 +54,6 @@ static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_(double *HPs
   }
 }
 
-/*
-static __global__ void _add_T_radial_weighted_psi_to_H_weighted_psi_2_(double *HPsi,
-								       const double *TRadPsi,
-								       const int n1, const int n2, 
-								       const int n_theta)
-{
-  const int index = threadIdx.x + blockDim.x*blockIdx.x;
-  if(index < n1*n2*n_theta) 
-    HPsi[index] += TRadPsi[index]/(n1*n2);
-}
-*/
-
 static __global__ void _add_potential_weighted_psi_to_H_weighted_psi_(double *HPsi, const double *psi,
 								      const double *pot, const int n)
 {
@@ -84,11 +72,11 @@ static __global__ void _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_(double *Ta
   double *I1 = rotational_moments;
   double *I2 = &I1[n1];
   double &Tsym = I2[n2];
-
+  
   cudaMath::setup_moments_of_inertia(I1, r1_dev.n, r1_dev.left, r1_dev.dr, r1_dev.mass);
   cudaMath::setup_moments_of_inertia(I2, r2_dev.n, r2_dev.left, r2_dev.dr, r2_dev.mass);
 
-  if(threadIdx.x == 0) Tsym = J*(J+1) - 2*omega*omega;
+  if(threadIdx.x == 0) Tsym = double(J*(J+1) - 2*omega*omega);
 
   __syncthreads();
   
@@ -96,6 +84,7 @@ static __global__ void _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_(double *Ta
   if(index < n1*n2*nLegs) {
     int i = -1; int j = -1; int l = -1;
     cudaMath::index_2_ijk(index, n1, n2, nLegs, i, j, l);
+    l += omega;
     TangPsi[index] += ((I1[i]+I2[j])*l*(l+1) + I1[i]*Tsym)*psi[index];
   }
 }
@@ -104,18 +93,20 @@ static __global__ void _add_T_asym_to_T_angle_legendre_psi_dev_(double *TangPsi,
 								const int n1, const int n2, 
 								const int nLegs,
 								const int J,
-								const int Omega, const int Omega1)
+								const int Omega, const int Omega1,
+								const int OmegaMax)
 {
   extern __shared__ double I1[];
   
   cudaMath::setup_moments_of_inertia(I1, r1_dev.n, r1_dev.left, r1_dev.dr, r1_dev.mass);
-
+  
   __syncthreads();
   
   const int index = threadIdx.x + blockDim.x*blockIdx.x;
   if(index < n1*n2*nLegs) {
     int i = -1; int j = -1; int l = -1;
     cudaMath::index_2_ijk(index, n1, n2, nLegs, i, j, l);
+    l += OmegaMax;
     const double c = coriolisUtils::coriolis(J, l, Omega, Omega1);
     TangPsi[index] += I1[i]*c*psi[index];
   }

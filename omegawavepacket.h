@@ -11,7 +11,6 @@ public:
 
   OmegaWavepacket(int omega,
 		  const double *potential_dev, 
-		  // int * &potential_scale_dev,
 		  cublasHandle_t &cublas_handle,
 		  cufftHandle &cufft_plan_D2Z,
 		  cufftHandle &cufft_plan_Z2D,
@@ -55,7 +54,7 @@ public:
 
   void copy_weighted_psi_from_device_to_host() const;
 
-  const double *legendre_psi_dev_() const { return legendre_psi_dev; }
+  const double *legendre_psi_dev_() const { return work_dev; }
   const int &omega_() const { return omega; }
 
 private:
@@ -66,7 +65,6 @@ private:
   double *weighted_psi_imag;
   
   const double *potential_dev;
-  // int * &potential_scale_dev;
   double *work_dev;
   
   double *weighted_psi_real_dev;
@@ -107,7 +105,7 @@ private:
 
   void copy_weighted_associated_legendres_from_host_to_device();
   
-  void setup_legendre_psi_dev();
+  //void setup_legendre_psi_dev();
   void setup_work_dev();
 
   void backward_legendre_transform() const;

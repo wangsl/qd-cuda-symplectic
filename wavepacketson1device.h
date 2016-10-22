@@ -41,6 +41,8 @@ private:
 
   void calculate_H_weighted_psi_dev(const int part);
 
+  const OmegaWavepacket *omega_wavepackets_right() const { return omega_wavepackets[n_omegas-1]; }
+
 private:
   
   Vec<OmegaWavepacket *> omega_wavepackets;
@@ -96,6 +98,9 @@ private:
 
   void setup_computation_stream_and_event();
   void destroy_streams_and_events();
+
+  int copy_to_left_stream_query() const;
+  int copy_to_right_stream_query() const;
 };
 
 #endif /* WAVEPACKETS_ON_SINGLE_DEVICE */
