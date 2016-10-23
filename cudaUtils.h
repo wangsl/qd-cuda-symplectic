@@ -7,6 +7,26 @@
 
 #define _CUDA_FREE_(x) if(x) { checkCudaErrors(cudaFree(x)); x = 0; }
 
+#define _CUDA_STREAM_CREATE_(x) {					\
+    if(!x) {								\
+      x = (cudaStream_t *) malloc(sizeof(cudaStream_t));		\
+      insist(x);							\
+      checkCudaErrors(cudaStreamCreate(x));				\
+    }									\
+  }			       
+
+#define _CUDA_EVENT_CREATE_(x) {					\
+    if(!x) {								\
+      x = (cudaEvent_t *) malloc(sizeof(cudaEvent_t));			\
+      insist(x);							\
+      checkCudaErrors(cudaEventCreateWithFlags(x, cudaEventDisableTiming)); \
+    }									\
+  }
+
+#define _CUDA_STREAM_DESTROY_(x) { if(x) { checkCudaErrors(cudaStreamDestroy(*x)); free(x); x = 0; } }
+
+#define _CUDA_EVENT_DESTROY_(x) { if(x) { checkCudaErrors(cudaEventDestroy(*x)); free(x); x = 0; } }
+
 #define _NTHREADS_ 512
 #define _POTENTIAL_CUTOFF_ -1.0e+6
 

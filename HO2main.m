@@ -8,7 +8,7 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 3;
+jRot = 6;
 nVib = 0;
 %end
 
@@ -30,7 +30,7 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(50000);
+time.total_steps = int32(100000);
 time.time_step = 1.0; %0.5;
 time.steps = int32(0);
 
@@ -98,7 +98,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 4;
+J = 8;
 parity = 1;
 lMax = 120;
 
@@ -120,7 +120,7 @@ wavepacket_parameters.weighted_associated_legendres = P;
 
 nOmegas = OmegaMax - OmegaMin + 1;
 wavepackets = zeros([size(psi), nOmegas]);
-wavepackets(:,:,:,2) = psi;
+wavepackets(:,:,:,4) = psi;
 %for o = 1 : nOmegas
 %  wavepackets(:,:,:,o) = psi;
 %end

@@ -63,9 +63,11 @@ private:
   int _has_cufft_plans;
 
   cudaStream_t *computation_stream;
-  cudaStream_t *copy_to_left_stream;
-  cudaStream_t *copy_to_right_stream;
-  cudaEvent_t *computation_event;
+  cudaStream_t *data_copy_stream;
+  
+  cudaEvent_t *computation_event_for_left;
+  cudaEvent_t *computation_event_for_right;
+  
   cudaEvent_t *copy_to_left_event;
   cudaEvent_t *copy_to_right_event;
   
@@ -99,8 +101,9 @@ private:
   void setup_computation_stream_and_event();
   void destroy_streams_and_events();
 
-  int copy_to_left_stream_query() const;
-  int copy_to_right_stream_query() const;
+  int copy_to_left_event_query() const;
+  int copy_to_right_event_query() const;
+  int ready_to_receive_data() const;
 };
 
 #endif /* WAVEPACKETS_ON_SINGLE_DEVICE */

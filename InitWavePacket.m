@@ -23,7 +23,7 @@ fprintf(' Gaussian wavepacket module: %.15f\n', sum(conj(G).*G)*R1.dr);
 %P = NormalizedLegendreP(jRot, Theta.x);
 
 P = legendre(jRot, Theta.x, 'norm');
-P = P(3, :);
+P = P(5, :);
 
 fprintf(' Legendre polynomail module: %.15f\n', sum(P.^2.*Theta.w));
 
