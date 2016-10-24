@@ -11,7 +11,7 @@ export LD_PRELOAD=$LD_PRELOAD:$MKL_LIB/libmkl_intel_ilp64.so:$MKL_LIB/libmkl_cor
 export LD_PRELOAD=$GCC_LIB/libstdc++.so:$LD_PRELOAD
 
 #export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="0,1"
 #export CUDA_VISIBLE_DEVICES="0,1,2"
 
 if [ "$1" == "-matlab" ]; then
@@ -20,6 +20,7 @@ elif [ "$1" == "-nodesktop" ]; then
     taskset -c 0-19 matlab -nodesktop -r "HO2main; exit" 2>&1 
 else
     #suffix=$(echo $CUDA_VISIBLE_DEVICES | sed -e 's/,//g')
+    #export OMP_NUM_THREADS=1
     nvprof \
 	--print-summary-per-gpu \
 	--profile-from-start off \

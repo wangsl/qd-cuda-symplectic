@@ -148,9 +148,10 @@ void WavepacketsOnSingleDevice::setup_cufft_plans()
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
 
-  /* wavepacket psi is from Matlab, which is column-major format, while cuFFT is using row-major format
+  /* wavepacket psi is from Matlab in column-major format, 
+   * while cuFFT is using row-major format,
    * so to switch dimensions, after D2Z FFT, the output data is { n2, n1/2+1 }, 
-   * it is still column-major format
+   * it is still in column-major format
    */
   const int dims [] = { n2, n1 };
   

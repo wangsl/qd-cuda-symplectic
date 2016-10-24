@@ -41,8 +41,6 @@ private:
 
   void calculate_H_weighted_psi_dev(const int part);
 
-  const OmegaWavepacket *omega_wavepackets_right() const { return omega_wavepackets[n_omegas-1]; }
-
 private:
   
   Vec<OmegaWavepacket *> omega_wavepackets;
@@ -61,6 +59,12 @@ private:
   cufftHandle cufft_plan_D2Z;
   cufftHandle cufft_plan_Z2D;
   int _has_cufft_plans;
+  
+  const WavepacketsOnSingleDevice *left;
+  const WavepacketsOnSingleDevice *right;
+  
+  double *omega_wavepacket_from_left_device;
+  double *omega_wavepacket_from_right_device;
 
   cudaStream_t *computation_stream;
   cudaStream_t *data_copy_stream;
@@ -70,12 +74,6 @@ private:
   
   cudaEvent_t *copy_to_left_event;
   cudaEvent_t *copy_to_right_event;
-  
-  const WavepacketsOnSingleDevice *left;
-  const WavepacketsOnSingleDevice *right;
-  
-  double *omega_wavepacket_from_left_device;
-  double *omega_wavepacket_from_right_device;
 
   double _module;
   double _total_energy;

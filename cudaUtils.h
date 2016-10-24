@@ -23,9 +23,21 @@
     }									\
   }
 
-#define _CUDA_STREAM_DESTROY_(x) { if(x) { checkCudaErrors(cudaStreamDestroy(*x)); free(x); x = 0; } }
+#define _CUDA_STREAM_DESTROY_(x) {		\
+    if(x) {					\
+      checkCudaErrors(cudaStreamDestroy(*x));	\
+      free(x);					\
+      x = 0;					\
+    }						\
+  }
 
-#define _CUDA_EVENT_DESTROY_(x) { if(x) { checkCudaErrors(cudaEventDestroy(*x)); free(x); x = 0; } }
+#define _CUDA_EVENT_DESTROY_(x) {		\
+    if(x) {					\
+      checkCudaErrors(cudaEventDestroy(*x));	\
+      free(x);					\
+      x = 0;					\
+    }						\
+  }
 
 #define _NTHREADS_ 512
 #define _POTENTIAL_CUTOFF_ -1.0e+6

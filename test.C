@@ -3,6 +3,7 @@
 using namespace std;
 
 #include "symplecticUtils.h"
+#include "numGradient.h"
 
 void my_test()
 {

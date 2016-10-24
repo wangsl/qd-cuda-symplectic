@@ -8,7 +8,7 @@ clc
 format long
 
 %if nargin == 0 
-jRot = 6;
+jRot = 8;
 nVib = 0;
 %end
 
@@ -31,18 +31,18 @@ masses = masses*MassAU;
 % time
 
 time.total_steps = int32(100000);
-time.time_step = 1.0; %0.5;
+time.time_step = 0.5;
 time.steps = int32(0);
 
 % r1: R
 
-r1.n = int32(256);
+r1.n = int32(512);
 r1.r = linspace(1.6, 16.0, r1.n);
 r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
 r1.mass = masses(1)*(masses(2)+masses(3))/(masses(1)+masses(2)+ ...
 					   masses(3));
-%r1.dump = WoodsSaxon(4.0, 14.5, r1.r);
+r1.dump = WoodsSaxon(4.0, 14.5, r1.r);
 
 r1.r0 = 10.0;
 r1.k0 = 0.35;
@@ -59,13 +59,13 @@ fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
 
 % r2: r
 
-r2.n = int32(256);
+r2.n = int32(512);
 r2.r = linspace(1.6, 12.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
 r2.mass = masses(2)*masses(3)/(masses(2)+masses(3));
 
-% r2.dump = WoodsSaxon(4.0, 10.0, r2.r);
+r2.dump = WoodsSaxon(4.0, 10.0, r2.r);
 
 % dividing surface
 
@@ -76,7 +76,7 @@ fprintf(' Dviding surface: %.15f\n', r2Div);
 
 % theta
 
-theta.n = int32(180);
+theta.n = int32(212);
 [ theta.x, theta.w ] = GaussLegendreGrids(theta.n);
 
 %theta.legendre = LegendreP2(double(theta.m), theta.x);
@@ -89,7 +89,7 @@ theta.n = int32(180);
 options.wave_to_matlab = 'HO2Matlab';
 options.CRPMatFile = sprintf('CRPMat-j%d-v%d.mat', jRot, nVib);
 options.steps_to_copy_psi_from_device_to_host = int32(100);
-options.potential_cutoff = 4.0;
+options.potential_cutoff = 2.0;
 
 % setup potential energy surface and initial wavepacket
 potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
@@ -100,7 +100,7 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 J = 8;
 parity = 1;
-lMax = 120;
+lMax = 180;
 
 wavepacket_parameters.J = int32(J);
 wavepacket_parameters.parity = int32(parity);
