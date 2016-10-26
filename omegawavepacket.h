@@ -5,8 +5,12 @@
 #include <cublas_v2.h>
 #include <cufft.h>
 
+class ReactionProbabilities;
+
 class OmegaWavepacket
 {
+  friend ReactionProbabilities;
+
 public:
 
   OmegaWavepacket(int omega,
@@ -57,6 +61,10 @@ public:
   const double *legendre_psi_dev_() const { return work_dev; }
   const int &omega_() const { return omega; }
 
+  void calculate_reaction_probabilities(const int calculate);
+
+  const double *reaction_probabilities() const;
+
 private:
 
   const int omega;
@@ -99,13 +107,13 @@ private:
   double _potential_energy_from_real;
   double _potential_energy_from_imag;
 
+  ReactionProbabilities *crp;
+
   void setup_weighted_psi();
   void copy_weighted_psi_from_host_to_device();
-  // void copy_weighted_psi_from_device_to_host() const;
 
   void copy_weighted_associated_legendres_from_host_to_device();
   
-  //void setup_legendre_psi_dev();
   void setup_work_dev();
 
   void backward_legendre_transform() const;
@@ -130,6 +138,8 @@ private:
   // fixed memory address
   const double *memory_1() const { return work_dev; }
   const double *memory_10() const { return device_work_dev; }
+
+  void setup_reaction_probabilities();
 };
 
 #endif /* OMEGA_WAVEPACKET_H */

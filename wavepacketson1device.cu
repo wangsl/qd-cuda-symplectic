@@ -18,6 +18,7 @@
 
 __constant__ EvolutionUtils::RadialCoordinate r1_dev;
 __constant__ EvolutionUtils::RadialCoordinate r2_dev;
+__constant__ double energies_dev[_EnergiesMaxSize_];
 
 WavepacketsOnSingleDevice::
 WavepacketsOnSingleDevice(const int device_index_,
@@ -64,7 +65,7 @@ void WavepacketsOnSingleDevice::setup_data_on_device()
   std::cout << " Setup data on device: " << device_index() << std::endl;
 
   setup_constant_memory_on_device();
-
+  
   setup_computation_stream_and_event();
 
   setup_cublas_handle();
@@ -91,6 +92,8 @@ void WavepacketsOnSingleDevice::destroy_data_on_device()
   destroy_cufft_plans();
 
   destroy_streams_and_events();
+
+  reaction_probabilities.resize(0);
 
   left = 0;
   right = 0;
@@ -205,6 +208,9 @@ void WavepacketsOnSingleDevice::setup_constant_memory_on_device()
 
   EvolutionUtils::copy_radial_coordinate_to_device(r1_dev, MatlabData::r1());
   EvolutionUtils::copy_radial_coordinate_to_device(r2_dev, MatlabData::r2());
+
+  copy_numerical_gradient_coefficients_to_device();
+  copy_reaction_probabity_energies_to_device();
 }
 
 void WavepacketsOnSingleDevice::setup_device_work_dev_and_copy_streams_events()
@@ -530,4 +536,75 @@ int WavepacketsOnSingleDevice::ready_to_receive_data() const
   if(right) right_ok = right->copy_to_left_event_query();
 
   return left_ok && right_ok ? 1 : 0;
+}
+
+void WavepacketsOnSingleDevice::copy_numerical_gradient_coefficients_to_device() const
+{
+  if(!MatlabData::options()->calculate_reaction_probabilities) return;
+
+  std::cout << " Copy numerical gradient coefficients on device: " 
+	    << current_device_index() << std::endl;
+
+  const int &n_points = MatlabData::crp_parameters()->n_gradient_points;
+  
+  Num1ststGradient::copy_gradient_coefficients_to_device(n_points);
+}
+
+void WavepacketsOnSingleDevice::test()
+{ 
+  setup_device();
+
+  const int &n_points = MatlabData::crp_parameters()->n_gradient_points;
+
+  std::cout << " Print " << n_points  << " gradient coefficients on device: " 
+	    << current_device_index() << std::endl;
+  
+  _print_gradient_coeffients_<<<1,1>>>(n_points/2);
+
+  const int &n_energies = MatlabData::crp_parameters()->n_energies;
+  
+  _print_energies_<<<1,1>>>(n_energies);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
+void WavepacketsOnSingleDevice::copy_reaction_probabity_energies_to_device() const
+{
+  if(!MatlabData::options()->calculate_reaction_probabilities) return;
+  
+  std::cout << " Copy reaction probability enegies to device: " 
+	    << current_device_index() << std::endl;
+  
+  const int &n_energies = MatlabData::crp_parameters()->n_energies;
+  const RVec &energies = MatlabData::crp_parameters()->energies;
+  
+  size_t size = 0;
+  checkCudaErrors(cudaGetSymbolSize(&size, energies_dev));
+  insist(size > n_energies*sizeof(double));
+  
+  checkCudaErrors(cudaMemcpyToSymbolAsync(energies_dev, energies,
+					  n_energies*sizeof(double), 0, 
+					  cudaMemcpyHostToDevice));
+}
+
+void WavepacketsOnSingleDevice::calculate_reaction_probabilities(const int calculate)
+{
+  if(!MatlabData::options()->calculate_reaction_probabilities) return;
+
+  setup_device();
+
+  for(int i = 0; i < n_omegas; i++)
+    omega_wavepackets[i]->calculate_reaction_probabilities(calculate);
+
+  if(calculate) {
+    const int &n_energies = MatlabData::crp_parameters()->n_energies;
+    
+    reaction_probabilities.resize(n_energies, 0);
+    reaction_probabilities.zeros();
+    
+    for(int i = 0; i < n_omegas; i++) {
+      const RVec crp(n_energies, const_cast<double *>(omega_wavepackets[i]->reaction_probabilities()));
+      reaction_probabilities += crp;
+    }
+  }
 }

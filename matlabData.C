@@ -9,6 +9,7 @@ static const double *_potential = 0;
 static EvolutionTime *_time = 0;
 static const Options *_options = 0;
 static WavepacketParameters *_wavepacket_parameters = 0;
+static CRPParameters *_crp_parameters = 0;
 
 // r1
 const RadialCoordinate *MatlabData::r1() { return _r1; }
@@ -39,12 +40,20 @@ WavepacketParameters *MatlabData::wavepacket_parameters() { return _wavepacket_p
 void MatlabData::wavepacket_parameters(WavepacketParameters *params) 
 { insist(params && !_wavepacket_parameters); _wavepacket_parameters = params; }
 
+// CRP parameters
+CRPParameters *MatlabData::crp_parameters() { return _crp_parameters; }
+void MatlabData::crp_parameters(CRPParameters *params) 
+{ insist(params && !_crp_parameters); _crp_parameters = params; }
+
 // check Matlab data
 void MatlabData::check_data()
 {
   insist(MatlabData::r1()->n%2 == 0);
   insist(MatlabData::r2()->n%2 == 0);
   insist(MatlabData::theta()->n > MatlabData::wavepacket_parameters()->l_max);
+  
+  if(MatlabData::options()->calculate_reaction_probabilities) 
+    insist(MatlabData::crp_parameters());
 }
 
 // destroy all data 
@@ -61,6 +70,7 @@ void MatlabData::destroy_all_data()
   _FREE_(_time);
   _FREE_(_options);
   _FREE_(_wavepacket_parameters);
+  _FREE_(_crp_parameters);
   _potential = 0;
 }
 

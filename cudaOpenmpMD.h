@@ -12,6 +12,8 @@ public:
   CUDAOpenmpMD();
 
   ~CUDAOpenmpMD();
+
+  void time_evolution();
   
   void test();
 
@@ -41,6 +43,8 @@ private:
   void copy_weighted_psi_from_device_to_host();
 
   void dump_wavepackets() const;
+
+  void calculate_reaction_probabilities(const int calculate);
 };
 
 #endif /* CUDA_OPENMP_MD_H */

@@ -14,7 +14,7 @@ r1 = HO2Data.r1;
 r2 = HO2Data.r2;
 pot = HO2Data.potential;
 
-omega = 4;
+omega = 1;
 
 k = 20;
 

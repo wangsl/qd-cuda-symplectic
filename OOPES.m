@@ -9,8 +9,10 @@ function [ V ] = OOPES(rOO)
 
 r1 = rOO;
 
-r3 = zeros(size(r1));
-r3(:) = 100.0;
+%r3 = zeros(size(r1));
+%r3(:) = 100.0;
+
+r3 = 100.0*ones(size(r1));
 
 r2 = r1 + r3;
 

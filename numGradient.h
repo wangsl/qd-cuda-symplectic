@@ -4,7 +4,8 @@
 
 #include "matlabUtils.h"
 
-//__constant__ double gradient_coeffients_dev[NMAX+10];
+#define _GradientMaxPoints_ 30
+#define _GradientMaxSize_ _GradientMaxPoints_+10
 
 /** 
     Mathematica code to generate these coeffients
@@ -27,7 +28,7 @@
 
 namespace Num1ststGradient
 {
-  const int _n_max = 30;
+  const int _n_max = _GradientMaxPoints_;
   
   const double _coefficients[465] = {
     
@@ -557,7 +558,7 @@ namespace Num1ststGradient
     -281.8538982024122592948408138611873605876E-21
   };
 
-  const double *coefficients(const int n_points) {
+  inline const double *coefficients(const int n_points) {
     const int n = n_points/2;
     insist(2*n+1 == n_points);
     insist(1 <= n && n <= _n_max);
@@ -566,10 +567,20 @@ namespace Num1ststGradient
     for(int i = 0; i < n; i++)
       index += i;
     
-    std::cout << " Gradients npoints: " << 2*n+1 << ", coefficents index: " << index << std::endl;
-    
     return &_coefficients[index];
   }
+
+  void copy_gradient_coefficients_to_device(const int n_points);
+
+  void gradients_1_3d(const int n1, const int n2, const int n3,
+		      const int n1_surface, const int n_points,
+		      const double dx1,
+		      const double *f, double *vals, double *grads);
+  
+  void gradients_2_3d(const int n1, const int n2, const int n3,
+		      const int n2_surface, const int n_points,
+		      const double dx2,
+		      const double *f, double *vals, double *grads);
 };
 
 #endif /* NUM_GRADIENT_H */

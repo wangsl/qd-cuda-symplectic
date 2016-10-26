@@ -42,8 +42,14 @@ EvolutionTime::EvolutionTime(const mxArray *mx) :
 Options::Options(const mxArray *mx) :
   mx(mx),
   wave_to_matlab(0),
-  steps_to_copy_psi_from_device_to_host(*(int *) mxGetData(mx, "steps_to_copy_psi_from_device_to_host", _mxInt32_)),
-  potential_cutoff(*(double *) mxGetData(mx, "potential_cutoff"))
+
+  steps_to_copy_psi_from_device_to_host					\
+  (*(int *) mxGetData(mx, "steps_to_copy_psi_from_device_to_host", _mxInt32_)),
+  
+  potential_cutoff(*(double *) mxGetData(mx, "potential_cutoff")),
+  
+  calculate_reaction_probabilities
+  (*(int *) mxGetData(mx, "calculate_reaction_probabilities", _mxInt32_))
 {
   wave_to_matlab = mxGetString(mx, "wave_to_matlab");
   if(wave_to_matlab)
@@ -56,21 +62,16 @@ Options::~Options()
   if(wave_to_matlab) { mxFree(wave_to_matlab); wave_to_matlab = 0; }
 }
 
-#if 0
-
-CummulativeReactionProbabilities::CummulativeReactionProbabilities(const mxArray *mx) :
+CRPParameters::CRPParameters(const mxArray *mx) :
   mx(mx),
-  n_dividing_surface(*(int *) mxGetData(mx, "n_dividing_surface")),
-  n_gradient_points(*(int *) mxGetData(mx, "n_gradient_points")),
-  n_energies(*(int *) mxGetData(mx, "n_energies")),
-  calculate_CRP(*(int *) mxGetData(mx, "calculate_CRP"))
+  n_dividing_surface(*(int *) mxGetData(mx, "n_dividing_surface", _mxInt32_)),
+  n_gradient_points(*(int *) mxGetData(mx, "n_gradient_points", _mxInt32_)),
+  n_energies(*(int *) mxGetData(mx, "n_energies", _mxInt32_))
 {
   energies = RVec(n_energies, (double *) mxGetData(mx, "energies"));
   eta_sq = RVec(n_energies, (double *) mxGetData(mx, "eta_sq"));
   CRP = RVec(n_energies, (double *) mxGetData(mx, "CRP"));
 }
-
-#endif
 
 WavepacketParameters::WavepacketParameters(const mxArray *mx) :
   mx(mx),

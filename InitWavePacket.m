@@ -17,13 +17,8 @@ fprintf(' Gaussian wavepacket module: %.15f\n', sum(conj(G).*G)*R1.dr);
 
 [ eO2, phiO2 ] = OOVibRotWaveFunction(R2, jRot, nVib);
 
-%fprintf(' O2 vibrational energy: %.14f\n', eO2);
-%fprintf(' O2 vibrational wavefunction module: %.14f\n', sum(phiO2.^2)*R2.dr);
-
-%P = NormalizedLegendreP(jRot, Theta.x);
-
 P = legendre(jRot, Theta.x, 'norm');
-P = P(5, :);
+P = P(1, :);
 
 fprintf(' Legendre polynomail module: %.15f\n', sum(P.^2.*Theta.w));
 

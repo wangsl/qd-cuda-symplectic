@@ -209,17 +209,36 @@ void CUDAOpenmpMD::dump_wavepackets() const
     wavepackets_on_single_device[i]->dump_wavepackets();
 }
 
-void CUDAOpenmpMD::test()
+void CUDAOpenmpMD::calculate_reaction_probabilities(const int calculate)
+{
+  std::cout << " Calculate reaction probabilities " << calculate << std::endl;
+
+#pragma omp parallel for default(shared)
+  for(int i_dev = 0; i_dev < n_devices(); i_dev++) 
+    wavepackets_on_single_device[i_dev]->calculate_reaction_probabilities(calculate);
+  
+  if(calculate) {
+    RVec &CRP = MatlabData::crp_parameters()->CRP;
+    CRP.zeros();
+    for(int i_dev = 0; i_dev < n_devices(); i_dev++) 
+    CRP += wavepackets_on_single_device[i_dev]->reaction_probabilities;
+  }
+}
+
+void CUDAOpenmpMD::time_evolution()
 {
   omp_set_num_threads(n_devices());
   
   const int &size = SymplecticUtils::coeffients_m6_n4.size;
   
+  const int n_steps = MatlabData::time()->total_steps;
   int &steps = MatlabData::time()->steps;
   
-  for(int L = 0; L < MatlabData::time()->total_steps; L++) {
+  for(int i_step = 0; i_step < n_steps; i_step++) {
     
-    std::cout << "\n Step: " << L+1 << ", " << time_now() << std::endl;
+    steps++;
+
+    std::cout << "\n Step: " << steps << ", " << time_now() << std::endl;
     
     checkCudaErrors(cudaProfilerStart());
     
@@ -230,6 +249,11 @@ void CUDAOpenmpMD::test()
       for(int i_dev = 0; i_dev < n_devices(); i_dev++)
 	wavepackets_on_single_device[i_dev]->propagate_with_symplectic_integrator(i_step);
       devices_synchoronize();
+    }
+    
+    if(MatlabData::options()->calculate_reaction_probabilities) {
+      const int calculate = steps%MatlabData::options()->steps_to_copy_psi_from_device_to_host == 0 ? 1 : 0;
+      calculate_reaction_probabilities(calculate);
     }
     
     checkCudaErrors(cudaProfilerStop());
@@ -243,12 +267,11 @@ void CUDAOpenmpMD::test()
     }
     std::cout << " T " << module << " " << energy << std::endl;
     
-    steps++;
-    
     if(MatlabData::options()->wave_to_matlab &&
        steps%MatlabData::options()->steps_to_copy_psi_from_device_to_host == 0) {
       copy_weighted_psi_from_device_to_host();
       mex_to_matlab(MatlabData::options()->wave_to_matlab);
+      devices_synchoronize();
     }
   }
   std::cout << std::endl;

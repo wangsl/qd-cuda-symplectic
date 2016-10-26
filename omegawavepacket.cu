@@ -9,6 +9,7 @@
 #include "symplecticUtils.h"
 
 #include "evolutionAux.cu"
+#include "reactProb.h"
 
 OmegaWavepacket::OmegaWavepacket(int omega_,
 				 const double *potential_dev_, 
@@ -32,13 +33,16 @@ OmegaWavepacket::OmegaWavepacket(int omega_,
   weighted_psi_dev(0), 
   legendre_psi_dev(0),
   T_angle_legendre_psi_dev(0),
-  H_weighted_psi_dev(0)
+  H_weighted_psi_dev(0),
+  crp(0)
 { 
   insist(potential_dev);
   insist(computation_stream);
   copy_weighted_psi_from_host_to_device();
   copy_weighted_associated_legendres_from_host_to_device();
   setup_work_dev();
+  // last one to setup reaction probabilities
+  setup_reaction_probabilities();
 }
 
 OmegaWavepacket::~OmegaWavepacket()
@@ -59,6 +63,8 @@ OmegaWavepacket::~OmegaWavepacket()
   _CUDA_FREE_(weighted_psi_imag_dev);
   _CUDA_FREE_(weighted_associated_legendres_dev);
   _CUDA_FREE_(work_dev);
+
+  if(crp) { delete crp; crp = 0; }
 }
 
 void OmegaWavepacket::setup_weighted_psi_dev(const int part)
@@ -269,10 +275,14 @@ void OmegaWavepacket::setup_work_dev()
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
 
-  std::cout << " Setup local work dev, Omega: " << omega
-	    << " " << n1 << " " << n2 << " " << n_theta << std::endl;
-
-  checkCudaErrors(cudaMalloc(&work_dev, n1*n2*n_theta*sizeof(double)));
+  int size = n1*n2*n_theta;
+  
+  if(MatlabData::options()->calculate_reaction_probabilities)
+    size = std::max(size, 4*n1*n_theta);
+  
+  std::cout << " Setup local work dev, Omega: " << omega << " " << size << std::endl; 
+  
+  checkCudaErrors(cudaMalloc(&work_dev, size*sizeof(double)));
   insist(work_dev);
 }
 
@@ -518,3 +528,24 @@ void OmegaWavepacket::dump_wavepacket() const
   _dump_wavepacket_<<<n_blocks, n_threads>>>(weighted_psi_real_dev, n1, n2, n_theta);
   _dump_wavepacket_<<<n_blocks, n_threads>>>(weighted_psi_imag_dev, n1, n2, n_theta);
 }
+
+void OmegaWavepacket::setup_reaction_probabilities()
+{
+  if(!MatlabData::options()->calculate_reaction_probabilities) return;
+  
+  if(crp) return;
+  
+  std::cout << " Setup reaction probabilities, Omega: " << omega << std::endl;
+  
+  crp = new ReactionProbabilities(this);
+  insist(crp);
+}
+
+void OmegaWavepacket::calculate_reaction_probabilities(const int calculate)
+{ if(crp) crp->calculate_reaction_probabilities(calculate); }
+
+const double *OmegaWavepacket::reaction_probabilities() const
+{ return crp ? (const double *) crp->reaction_probabilities : 0; }
+
+
+

@@ -29,6 +29,9 @@ namespace MatlabData
   WavepacketParameters *wavepacket_parameters();
   void wavepacket_parameters(WavepacketParameters *params);
 
+  CRPParameters *crp_parameters();
+  void crp_parameters(CRPParameters *params);
+
   void check_data();
   void destroy_all_data();
 };

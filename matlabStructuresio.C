@@ -1,5 +1,5 @@
 
-/* created at: 2016-10-18 21:45:16 */
+/* created at: 2016-10-25 12:59:40 */
 
 #include <iostream>
 using namespace std;
@@ -74,6 +74,7 @@ void Options::write_fields(ostream &s) const
     s << Indent() << "wave_to_matlab " << wave_to_matlab << "\n";
   s << Indent() << "steps_to_copy_psi_from_device_to_host " << steps_to_copy_psi_from_device_to_host << "\n";
   s << Indent() << "potential_cutoff " << potential_cutoff << "\n";
+  s << Indent() << "calculate_reaction_probabilities " << calculate_reaction_probabilities << "\n";
 }
 
 ostream & operator <<(ostream &s, const WavepacketParameters &c)
@@ -92,5 +93,21 @@ void WavepacketParameters::write_fields(ostream &s) const
   s << Indent() << "l_max " << l_max << "\n";
   s << Indent() << "omega_min " << omega_min << "\n";
   s << Indent() << "omega_max " << omega_max << "\n";
+}
+
+ostream & operator <<(ostream &s, const CRPParameters &c)
+{
+  s << " {\n";
+  IndentPush();
+  c.write_fields(s);
+  IndentPop();
+  return s << Indent() << " }";
+}
+
+void CRPParameters::write_fields(ostream &s) const
+{
+  s << Indent() << "n_dividing_surface " << n_dividing_surface << "\n";
+  s << Indent() << "n_gradient_points " << n_gradient_points << "\n";
+  s << Indent() << "n_energies " << n_energies << "\n";
 }
 

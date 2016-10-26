@@ -47,7 +47,7 @@ LIBS = -lifcoremt -L$(CUDA_LIB) -lcufft -lcublas -lcudart #-lmkl_rt
 MEXA64Files = $(O)/cudaSymplectic.mexa64 $(O)/DMBEIVMex.mexa64
 
 CUDAObjs = $(O)/cudaOpenmpMD.o $(O)/cudaUtils.o $(O)/wavepacketson1device.o \
-	$(O)/omegawavepacket.o 
+	$(O)/omegawavepacket.o $(O)/numGradient.o  $(O)/reactProb.o
  
 CUDALinkObj = $(O)/cudalink.o
 

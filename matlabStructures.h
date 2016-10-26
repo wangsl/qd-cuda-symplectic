@@ -94,6 +94,7 @@ public:
   char *wave_to_matlab; // out
   const int &steps_to_copy_psi_from_device_to_host; // out
   const double &potential_cutoff; // out
+  const int &calculate_reaction_probabilities; // out
   
   Options(const mxArray *mx);
   ~Options();
@@ -143,33 +144,30 @@ private:
   void write_fields(ostream &s) const;
 };
 
-#if 0
-
-class CummulativeReactionProbabilities
+class CRPParameters
 {
 public:
 
+  CRPParameters(const mxArray *mx);
+
+  ~CRPParameters() { if(mx) mx = 0; }
+
+  const int &n_dividing_surface; // out
+  const int &n_gradient_points; // out
+  const int &n_energies; // out
+  
   RVec energies; 
   RVec eta_sq; 
   RVec CRP; 
 
-  const int &n_dividing_surface; 
-  const int &n_gradient_points; 
-  const int &n_energies; 
-  const int &calculate_CRP; 
-  
-  CummulativeReactionProbabilities(const mxArray *mx);
-
 private:
   const mxArray *mx;
-
-  CummulativeReactionProbabilities(const CummulativeReactionProbabilities &);
-  CummulativeReactionProbabilities & operator =(const CummulativeReactionProbabilities &);
-
-  friend ostream & operator <<(ostream &s, const CummulativeReactionProbabilities &c);
+  
+  CRPParameters(const CRPParameters &);
+  CRPParameters & operator =(const CRPParameters &);
+  
+  friend ostream & operator <<(ostream &s, const CRPParameters &c);
   void write_fields(ostream &s) const;
 };
-
-#endif
 
 #endif /* MATLAB_STRUCTURES_H */

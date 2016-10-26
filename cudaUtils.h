@@ -4,6 +4,8 @@
 
 #include <chrono>
 #include <thread>
+#include <cublas_v2.h>
+#include <cufft.h>
 
 #define _CUDA_FREE_(x) if(x) { checkCudaErrors(cudaFree(x)); x = 0; }
 
@@ -43,6 +45,24 @@
 #define _POTENTIAL_CUTOFF_ -1.0e+6
 
 namespace cudaUtils {
+
+  __device__ __host__ inline int ij_2_index(const int n1, const int n2, const int i, const int j)
+  { return j*n1 + i; }
+  
+  __device__ __host__ inline void index_2_ij(const int index, const int n1, const int n2, int &i, int &j)
+  {  j = index/n1; i = index - j*n1; }
+  
+  __device__ __host__ inline int ijk_2_index(const int n1, const int n2, const int n3, 
+					     const int i, const int j, const int k)
+  { return (k*n2 + j)*n1 + i; }
+  
+  __device__ __host__ inline void index_2_ijk(const int index, const int n1, const int n2, const int n3, 
+					      int &i, int &j, int &k)
+  {
+    int ij = -1;
+    index_2_ij(index, n1*n2, n3, ij, k);
+    index_2_ij(ij, n1, n2, i, j);
+  }
   
   inline int number_of_blocks(const int n_threads, const int n)
   { return n/n_threads*n_threads == n ? n/n_threads : n/n_threads+1; }

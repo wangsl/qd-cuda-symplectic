@@ -7,6 +7,7 @@
 
 #include "omegawavepacket.h"
 #include "vecbase.h"
+#include "rmat.h"
 
 class WavepacketsOnSingleDevice
 {
@@ -32,6 +33,12 @@ public:
 
   double module() const { return _module; }
   double total_energy() const { return _total_energy; }
+
+  void calculate_reaction_probabilities(const int calculate);
+
+  RVec reaction_probabilities;
+
+  void test();
 
 private:
 
@@ -102,6 +109,9 @@ private:
   int copy_to_left_event_query() const;
   int copy_to_right_event_query() const;
   int ready_to_receive_data() const;
+
+  void copy_numerical_gradient_coefficients_to_device() const;
+  void copy_reaction_probabity_energies_to_device() const;
 };
 
 #endif /* WAVEPACKETS_ON_SINGLE_DEVICE */

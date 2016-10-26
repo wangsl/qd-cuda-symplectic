@@ -15,11 +15,16 @@ void mexFunction(int nlhs, mxArray *plhs[],
 {
   const int np = std::cout.precision();
   std::cout.precision(14);
-
-  std::cout << "\n Quantum Dynamics Time Evolution with CUDA\n" << std::endl;
+  
+  std::cout << " **********************************************\n"
+	    << " *                                            *\n"
+	    << " *  Quantum Dynamics Time Evolution with CUDA *\n" 
+	    << " *                                            *\n"
+	    << " **********************************************\n" 
+	    << std::endl;
 
   std::cout << " Setup Matlab data for C++/CUDA" << std::endl;
-
+  
   insist(nrhs == 1);
 
   mxArray *mxPtr = 0;
@@ -52,11 +57,18 @@ void mexFunction(int nlhs, mxArray *plhs[],
   insist(mxPtr);
   MatlabData::wavepacket_parameters(new WavepacketParameters(mxPtr));
 
+  mxPtr = mxGetField(prhs[0], 0, "CRP");
+  insist(mxPtr);
+  MatlabData::crp_parameters(new CRPParameters(mxPtr));
+  
   MatlabData::check_data();
+
+  std::cout << *MatlabData::options() << std::endl;
+  std::cout << *MatlabData::crp_parameters() << std::endl;
 
   CUDAOpenmpMD *evolCUDA = new CUDAOpenmpMD();
   insist(evolCUDA);
-  evolCUDA->test();
+  evolCUDA->time_evolution();
   if(evolCUDA) { delete evolCUDA; evolCUDA = 0; }
   
   MatlabData::destroy_all_data();
