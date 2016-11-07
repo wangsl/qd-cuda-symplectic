@@ -17,3 +17,4 @@ contour(x, y, phi')
 % [ X, Y ] = meshgrid(x, y);
 % contour(X, Y, phi)
 
+plot(x, phix, y, phiy)

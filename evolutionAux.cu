@@ -170,7 +170,7 @@ static __global__ void _psi_time_to_fai_energy_on_dividing_surface_
   extern __shared__ Complex expIEtDt[];
   
   for(int i = threadIdx.x; i < n_energies; i += blockDim.x)
-    expIEtDt[i] = exp(Complex(0.0, t)*energies_dev[i])*dt;
+    expIEtDt[i] = exp(Complex(0.0, t*energies_dev[i]))*dt;
   
   __syncthreads();
 
