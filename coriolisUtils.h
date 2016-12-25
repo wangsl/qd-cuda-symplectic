@@ -13,10 +13,10 @@
  **/
 
 namespace coriolisUtils {
-
+  
   __device__ __host__ inline int kronecker_delta(const int a, const int b)
   { return a == b ? 1 : 0; }
-
+  
   // sign should be +1 or -1
   __device__ __host__ inline double lambda(const int a, const int b, const int sign)
   { return a >= b ? sqrt(double(a*(a+1)-b*(b+sign))) : 0; }

@@ -8,12 +8,16 @@
 #define _RealPart_ 1
 #define _ImagPart_ 2
 
-#ifdef __NVCC__
+#define _RotStatesAll_ 0
+#define _RotStatesOdd_ 1
+#define _RotStatesEven_ 2
 
 #define _DumpMaxSize_ 1024
 #define _EnergiesMaxSize_ 512
 
 namespace EvolutionUtils {
+
+#ifdef __NVCC__  
   
   struct RadialCoordinate
   {
@@ -46,14 +50,21 @@ namespace EvolutionUtils {
 					    sizeof(RadialCoordinate), 0, 
 					    cudaMemcpyHostToDevice));
   }
+  
+#endif
+  
+  inline int int_to_even_right(const int i) { return i/2*2 == i ? i : i+1; } 
+  inline int int_to_even_left(const int i) { return i/2*2 == i ? i : i-1; }  
+  inline int int_to_odd_right(const int i) { return i/2*2 == i ? i+1 : i; }
+  inline int int_to_odd_left(const int i) { return i/2*2 == i ? i-1 : i; }
 }
 
+#ifdef __NVCC__
 extern __constant__ EvolutionUtils::RadialCoordinate r1_dev;
 extern __constant__ EvolutionUtils::RadialCoordinate r2_dev;
 extern __constant__ double energies_dev[_EnergiesMaxSize_];
 extern __constant__ double gradient_coeffients_dev[_GradientMaxSize_];
-
-#endif /* __NVCC__ */
+#endif
 
 #endif /* EVOLUTION_UTILS_H */
 

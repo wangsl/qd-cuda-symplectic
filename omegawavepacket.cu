@@ -11,6 +11,38 @@
 #include "evolutionAux.cu"
 #include "reactProb.h"
 
+inline int OmegaWavepacket::minimum_Legendres_order() const
+{
+  int l_min = -1;
+  const int &rot_states = MatlabData::options()->rotational_states;
+  if(rot_states == _RotStatesAll_) 
+    l_min = omega;
+  else if(rot_states == _RotStatesOdd_)
+    l_min = EvolutionUtils::int_to_odd_right(omega);
+  else if(rot_states == _RotStatesEven_)
+    l_min = EvolutionUtils::int_to_even_right(omega);
+
+  return l_min;
+}
+
+inline int OmegaWavepacket::number_of_associated_Legendres() const
+{
+  const int &l_max = MatlabData::wavepacket_parameters()->l_max;
+  const int &rot_states = MatlabData::options()->rotational_states;
+  
+  int n_ass_Legs = -1;
+  if(rot_states == _RotStatesAll_) 
+    n_ass_Legs = l_max - omega + 1;
+  else if(rot_states == _RotStatesOdd_)
+    n_ass_Legs = (EvolutionUtils::int_to_odd_left(l_max) - 
+		  EvolutionUtils::int_to_odd_right(omega))/2 + 1;
+  else if(rot_states == _RotStatesEven_)
+    n_ass_Legs = (EvolutionUtils::int_to_even_left(l_max) -
+		  EvolutionUtils::int_to_even_right(omega))/2 + 1;
+
+  return n_ass_Legs;
+}
+
 OmegaWavepacket::OmegaWavepacket(int omega_,
 				 const double *potential_dev_, 
 				 cublasHandle_t &cublas_handle_,
@@ -115,13 +147,14 @@ void OmegaWavepacket::copy_weighted_psi_from_device_to_host() const
   insist(weighted_psi_real && weighted_psi_imag);
   insist(weighted_psi_real_dev && weighted_psi_imag_dev);
   
-  checkCudaErrors(cudaMemcpyAsync(weighted_psi_real, weighted_psi_real_dev, 
-				  n1*n2*n_theta*sizeof(double), 
-				  cudaMemcpyDeviceToHost));
+  // we can not use unsynchronize version with OpenMP, PCIe can not handle too much data transfer 
+  // at the same time, node will be crashed
   
-  checkCudaErrors(cudaMemcpyAsync(weighted_psi_imag, weighted_psi_imag_dev, 
-				  n1*n2*n_theta*sizeof(double), 
-				  cudaMemcpyDeviceToHost));
+  checkCudaErrors(cudaMemcpy(weighted_psi_real, weighted_psi_real_dev, n1*n2*n_theta*sizeof(double), 
+			     cudaMemcpyDeviceToHost));
+  
+  checkCudaErrors(cudaMemcpy(weighted_psi_imag, weighted_psi_imag_dev, n1*n2*n_theta*sizeof(double), 
+			     cudaMemcpyDeviceToHost));
 }
 
 void OmegaWavepacket::setup_weighted_psi()
@@ -148,10 +181,9 @@ void OmegaWavepacket::copy_weighted_associated_legendres_from_host_to_device()
   std::cout << " Copy associated Legendres to device, Omega: " << omega;
   
   const int &n_theta = MatlabData::theta()->n;
-  const int &l_max = MatlabData::wavepacket_parameters()->l_max;
   const int &omega_min = MatlabData::wavepacket_parameters()->omega_min;
-  
-  const int n_ass_Legs = l_max - omega + 1;
+
+  const int n_ass_Legs = number_of_associated_Legendres();
   
   const int omega_index = omega - omega_min;
   
@@ -159,7 +191,7 @@ void OmegaWavepacket::copy_weighted_associated_legendres_from_host_to_device()
   const RMat &ass_Leg = Legendres[omega_index];
   
   insist(ass_Leg.rows() == n_theta && ass_Leg.columns() == n_ass_Legs);
-
+  
   std::cout << ", size: " << n_theta << " " << n_ass_Legs << std::endl;
 
   checkCudaErrors(cudaMalloc(&weighted_associated_legendres_dev, n_theta*n_ass_Legs*sizeof(double)));
@@ -181,13 +213,15 @@ double OmegaWavepacket::dot_product_with_volume_element(const double *x_dev, con
   const double &dr2 = MatlabData::r2()->dr;
   
   double s = 0.0;
-  insist(cublasDdot(cublas_handle, n1*n2*n_theta, x_dev, 1, y_dev, 1, &s) == CUBLAS_STATUS_SUCCESS);
-  
+  insist(cublasDdot(cublas_handle, n1*n2*n_theta, x_dev, 1, y_dev, 1, &s) 
+	 == CUBLAS_STATUS_SUCCESS);
+
   s *= dr1*dr2;
   
   return s;
 }
 
+/*
 double OmegaWavepacket::
 dot_product_with_volume_element_for_legendres(const double *x_dev, const double *y_dev) const
 {
@@ -195,7 +229,9 @@ dot_product_with_volume_element_for_legendres(const double *x_dev, const double 
 
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  
+  //const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  const int n_ass_Legs = number_of_associated_legendres();
   
   const double &dr1 = MatlabData::r1()->dr;
   const double &dr2 = MatlabData::r2()->dr;
@@ -204,12 +240,13 @@ dot_product_with_volume_element_for_legendres(const double *x_dev, const double 
   const double *y = y_dev + omega*n1*n2;
   
   double s = 0.0;
-  insist(cublasDdot(cublas_handle, n1*n2*n_Legs, x, 1, y, 1, &s) == CUBLAS_STATUS_SUCCESS);
+  insist(cublasDdot(cublas_handle, n1*n2*n_ass_Legs, x, 1, y, 1, &s) == CUBLAS_STATUS_SUCCESS);
   
   s *= dr1*dr2;
 
   return s;
 }
+*/
 
 void OmegaWavepacket::calculate_wavepacket_module()
 {
@@ -296,7 +333,8 @@ void OmegaWavepacket::forward_legendre_transform()
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  //const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  const int n_ass_Legs = number_of_associated_Legendres();
 
   const double zero = 0.0;
   const double one = 1.0;
@@ -304,7 +342,7 @@ void OmegaWavepacket::forward_legendre_transform()
   double *legendre_psi_dev_ = legendre_psi_dev + omega*n1*n2;
 
   insist(cublasDgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_N,
-		     n1*n2, n_Legs, n_theta, 
+		     n1*n2, n_ass_Legs, n_theta, 
 		     &one, 
 		     weighted_psi_dev, n1*n2,
 		     weighted_associated_legendres_dev, n_theta, 
@@ -322,7 +360,8 @@ void OmegaWavepacket::backward_legendre_transform() const
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  //const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  const int n_ass_Legs = number_of_associated_Legendres();
   
   const double zero = 0.0;
   const double one = 1.0;
@@ -330,7 +369,7 @@ void OmegaWavepacket::backward_legendre_transform() const
   const double *legendre_psi_dev_ = legendre_psi_dev + omega*n1*n2;
   
   insist(cublasDgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-		     n1*n2, n_theta, n_Legs,
+		     n1*n2, n_theta, n_ass_Legs,
 		     &one, 
 		     legendre_psi_dev_, n1*n2,
 		     weighted_associated_legendres_dev, n_theta, 
@@ -347,7 +386,8 @@ void OmegaWavepacket::T_angle_legendre_psi_to_H_weighted_psi_dev()
   const int &n1 = MatlabData::r1()->n;
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  //const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  const int n_ass_Legs = number_of_associated_Legendres();
   
   const double zero = 0.0;
   const double one = 1.0;
@@ -355,7 +395,7 @@ void OmegaWavepacket::T_angle_legendre_psi_to_H_weighted_psi_dev()
   const double *T_angle_legendre_psi_dev_ = T_angle_legendre_psi_dev + omega*n1*n2;
   
   insist(cublasDgemm(cublas_handle, CUBLAS_OP_N, CUBLAS_OP_T,
-		     n1*n2, n_theta, n_Legs,
+		     n1*n2, n_theta, n_ass_Legs,
 		     &one, 
 		     T_angle_legendre_psi_dev_, n1*n2,
 		     weighted_associated_legendres_dev, n_theta, 
@@ -374,7 +414,7 @@ void OmegaWavepacket::copy_T_angle_legendre_psi_to_device_work_dev()
   checkCudaErrors(cudaMemcpy(device_work_dev, T_angle_legendre_psi_dev, 
 			     n1*n2*(l_max+1)*sizeof(double),
 			     cudaMemcpyDeviceToDevice));
-
+  
   T_angle_legendre_psi_dev = const_cast<double *>(memory_10());
 }
 
@@ -386,7 +426,7 @@ void OmegaWavepacket::calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev()
   const int &n2 = MatlabData::r2()->n;
   const int &n_theta = MatlabData::theta()->n;
   const int &J = MatlabData::wavepacket_parameters()->J;
-
+  
   insist(computation_stream);
   
   T_angle_legendre_psi_dev = const_cast<double *>(memory_0());
@@ -394,18 +434,30 @@ void OmegaWavepacket::calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev()
   checkCudaErrors(cudaMemsetAsync(T_angle_legendre_psi_dev, 0, n1*n2*n_theta*sizeof(double),
 				  *computation_stream));
   
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  //const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
+  const int n_ass_Legs = number_of_associated_Legendres();
   
   double *T_angle_legendre_psi_dev_ = T_angle_legendre_psi_dev + omega*n1*n2;
   const double *legendre_psi_dev_ = legendre_psi_dev + omega*n1*n2;
   
   const int n_threads = _NTHREADS_;
-  int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_Legs);
+  int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_ass_Legs);
+
+  int a = 1; int b = omega;
+  /*
+  const int &rot_states = MatlabData::options()->rotational_states;
+  if(rot_states == _RotStatesOdd_) {
+    a = 2; b = EvolutionUtils::int_to_odd_right(omega);
+  } else if(rot_states == _RotStatesEven_) {
+    a = 2; b = EvolutionUtils::int_to_even_right(omega);
+  } 
+  */
   
   _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_<<<n_blocks, n_threads, 
     (n1+n2+1)*sizeof(double), *computation_stream>>>(T_angle_legendre_psi_dev_, 
 						     legendre_psi_dev_,
-						     n1, n2, n_Legs, J, omega);
+						     n1, n2, n_ass_Legs, J, omega,
+						     a, b);
 }
 
 void OmegaWavepacket::calculate_T_asym_add_to_T_angle_legendre_psi_dev(const double *psi_dev, 
@@ -421,19 +473,31 @@ void OmegaWavepacket::calculate_T_asym_add_to_T_angle_legendre_psi_dev(const dou
   
   const int omega_max = std::max(omega, omega1);
   
-  const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega_max + 1;
+  // const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega_max + 1;
+  const int n_ass_Legs = number_of_associated_Legendres();
 
   double *T_angle_legendre_psi_dev_ = T_angle_legendre_psi_dev + omega_max*n1*n2;
   const double *legendre_psi_dev_ = psi_dev + omega_max*n1*n2;
+
+  int a = 1; int b = omega_max;
+  /*
+  const int &rot_states = MatlabData::options()->rotational_states;
+  if(rot_states == _RotStatesOdd_) {
+    a = 2; b = EvolutionUtils::int_to_odd_right(omega_max);
+  } else if(rot_states == _RotStatesEven_) {
+    a = 2; b = EvolutionUtils::int_to_even_right(omega_max);
+  } 
+  */
   
   const int n_threads = _NTHREADS_;
-  int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_Legs);
+  int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_ass_Legs);
   
   insist(computation_stream);
   
   _add_T_asym_to_T_angle_legendre_psi_dev_<<<n_blocks, n_threads, n1*sizeof(double),
     *computation_stream>>>(T_angle_legendre_psi_dev_, legendre_psi_dev_,
-			   n1, n2, n_Legs, J, omega, omega1, omega_max);
+			   n1, n2, n_ass_Legs, J, omega, omega1, omega_max,
+			   a, b);
 }
 
 

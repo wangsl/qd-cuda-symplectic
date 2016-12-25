@@ -77,7 +77,8 @@ static __global__ void _add_potential_weighted_psi_to_H_weighted_psi_(double *HP
 static __global__ void _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_(double *TangPsi, const double *psi,
 								      const int n1, const int n2, 
 								      const int nLegs,
-								      const int J, const int omega)
+								      const int J, const int omega,
+								      const int a, const int b)
 {
   extern __shared__ double rotational_moments[];
 
@@ -96,7 +97,8 @@ static __global__ void _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_(double *Ta
   if(index < n1*n2*nLegs) {
     int i = -1; int j = -1; int l = -1;
     cudaUtils::index_2_ijk(index, n1, n2, nLegs, i, j, l);
-    l += omega;
+    // l += omega;
+    l = a*l + b;
     TangPsi[index] += ((I1[i]+I2[j])*l*(l+1) + I1[i]*Tsym)*psi[index];
   }
 }
@@ -106,7 +108,8 @@ static __global__ void _add_T_asym_to_T_angle_legendre_psi_dev_(double *TangPsi,
 								const int nLegs,
 								const int J,
 								const int Omega, const int Omega1,
-								const int OmegaMax)
+								const int OmegaMax,
+								const int a, const int b)
 {
   extern __shared__ double I1[];
   
@@ -118,7 +121,8 @@ static __global__ void _add_T_asym_to_T_angle_legendre_psi_dev_(double *TangPsi,
   if(index < n1*n2*nLegs) {
     int i = -1; int j = -1; int l = -1;
     cudaUtils::index_2_ijk(index, n1, n2, nLegs, i, j, l);
-    l += OmegaMax;
+    //l += OmegaMax;
+    l = a*l + b;
     const double c = coriolisUtils::coriolis(J, l, Omega, Omega1);
     TangPsi[index] += I1[i]*c*psi[index];
   }

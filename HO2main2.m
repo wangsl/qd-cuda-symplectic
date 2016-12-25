@@ -28,13 +28,13 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(200000);
-time.time_step = 0.5;
+time.total_steps = int32(1000000);
+time.time_step = 0.2;
 time.steps = int32(0);
 
 % r1: R
 
-r1.n = int32(512);
+r1.n = int32(384);
 r1.r = linspace(1.6, 16.0, r1.n);
 r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
@@ -57,7 +57,7 @@ fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
 
 % r2: r
 
-r2.n = int32(512);
+r2.n = int32(384);
 r2.r = linspace(1.6, 12.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
@@ -88,6 +88,7 @@ options.wave_to_matlab = 'HO2Matlab';
 options.steps_to_copy_psi_from_device_to_host = int32(100);
 options.potential_cutoff = 2.0;
 options.calculate_reaction_probabilities = int32(1);
+options.rotational_states = int32(0);
 
 % setup potential energy surface and initial wavepacket
 potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
@@ -96,8 +97,8 @@ potential = DMBEIVPESJacobi(r1.r, r2.r, theta.x, masses);
 
 % PlotPotWave(r1, r2, potential, psi)
 
-J = 0;
-parity = 0;
+J = 32;
+parity = 1;
 lMax = 200;
 
 wavepacket_parameters.J = int32(J);

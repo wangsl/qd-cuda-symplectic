@@ -14,10 +14,10 @@ namespace MatlabData
 
   const AngleCoordinate *theta();
   void theta(const AngleCoordinate *th);
-
+  
   const double *potential();
   void potential(const double *p);
-
+  
   inline int dump_wavepacket() { return r1()->dump.size() && r2()->dump.size() ? 1 : 0; }
   
   EvolutionTime *time();
@@ -25,10 +25,10 @@ namespace MatlabData
   
   const Options *options();
   void options(const Options *op);
-
+  
   WavepacketParameters *wavepacket_parameters();
   void wavepacket_parameters(WavepacketParameters *params);
-
+  
   CRPParameters *crp_parameters();
   void crp_parameters(CRPParameters *params);
 

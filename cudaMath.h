@@ -14,7 +14,7 @@
 namespace cudaMath {
 
   inline bool is_pow_2(int x) { return ((x&(x-1)) == 0); }
-
+  
   __device__ __host__ inline double sq(const double x) { return x*x; }
 
   __device__ inline double atomicAdd(double *address, double val)
@@ -57,7 +57,7 @@ namespace cudaMath {
   {
     if(n/2*2 != n) return;
     
-    const double two_pi_xl = 2*Pi/xl;
+    const double two_pi_xl = 2.0*Pi/xl;
     
     for(int i = threadIdx.x; i < n; i += blockDim.x) {
       if(i <= n/2) 
@@ -72,13 +72,14 @@ namespace cudaMath {
   {
     if(n/2*2 != n) return;
     
-    const double two_pi_xl = 2*Pi/xl;
+    const double two_pi_xl = 2.0*Pi/xl;
+    const double mass_inv_half = 0.5/mass;
     
     for(int i = threadIdx.x; i < n; i += blockDim.x) {
       if(i <= n/2) {
-	kin[i] = sq(two_pi_xl*i)/(mass+mass);
+	kin[i] = sq(two_pi_xl*i)*mass_inv_half;
       } else if(i > n/2) {
-	kin[i] = sq(two_pi_xl*(-n+i))/(mass+mass);
+	kin[i] = sq(two_pi_xl*(-n+i))*mass_inv_half;
       }
     }
   }
@@ -88,19 +89,22 @@ namespace cudaMath {
   {
     if(n/2*2 != n) return;
     
-    const double two_pi_xl = 2*Pi/xl;
+    const double two_pi_xl = 2.0*Pi/xl;
+    const double mass_inv_half = 0.5/mass;
     
     for(int i = threadIdx.x; i <= n/2; i += blockDim.x) {
-      kin[i] = sq(two_pi_xl*i)/(mass+mass);
+      kin[i] = sq(two_pi_xl*i)*mass_inv_half;
     }
   }
   
   __device__ inline void setup_moments_of_inertia(double *I, const int n, const double r_left, 
 						  const double dr, const double mass)
   {
+    const double two_mass = mass + mass;
+    
     for(int i = threadIdx.x; i < n; i += blockDim.x) {
       const double r = r_left + i*dr;
-      I[i] = 1.0/(2*mass*r*r);
+      I[i] = 1.0/(two_mass*r*r);
     }
   }
 

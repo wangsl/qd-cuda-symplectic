@@ -190,7 +190,7 @@ void CUDAOpenmpMD::setup_device_work_dev_on_devices() const
 void CUDAOpenmpMD::copy_weighted_psi_from_device_to_host()
 {
   const int &n = wavepackets_on_single_device.size();
-#pragma omp parallel for default(shared)
+  //#pragma omp parallel for default(shared)
   for(int i = 0; i < n; i++)
     wavepackets_on_single_device[i]->copy_weighted_psi_from_device_to_host();
   

@@ -4,6 +4,7 @@
 #include "matlabUtils.h"
 #include "matlabArray.h"
 #include "matlabData.h"
+#include "evolutionUtils.h"
 
 void remove_matlab_script_extension(char *script, const char *extension)
 {
@@ -47,6 +48,8 @@ Options::Options(const mxArray *mx) :
   (*(int *) mxGetData(mx, "steps_to_copy_psi_from_device_to_host", _mxInt32_)),
   
   potential_cutoff(*(double *) mxGetData(mx, "potential_cutoff")),
+
+  rotational_states(*(int *) mxGetData(mx, "rotational_states", _mxInt32_)),
   
   calculate_reaction_probabilities
   (*(int *) mxGetData(mx, "calculate_reaction_probabilities", _mxInt32_))
@@ -54,6 +57,10 @@ Options::Options(const mxArray *mx) :
   wave_to_matlab = mxGetString(mx, "wave_to_matlab");
   if(wave_to_matlab)
     remove_matlab_script_extension(wave_to_matlab, ".m");
+
+  insist(rotational_states == _RotStatesAll_ ||
+	 rotational_states == _RotStatesOdd_ ||
+	 rotational_states == _RotStatesEven_);
 }
 
 Options::~Options()
@@ -142,18 +149,76 @@ void WavepacketParameters::setup_weighted_associated_legendres()
     insist(MatlabData::theta()->n > l_max+1);
   }
   
-  if(omega_min == 0) 
-    insist(n2 == l_max+1 && n3 == omega_max+1);
-  else if(omega_min == 1)
-    insist(n2 == l_max && n3 == omega_max);
+  insist(n2 == l_max-omega_min+1 && n3 == omega_max-omega_min+1);
   
-  std::cout << " Weighted associated Legendres size: " << n1 << " " << n2 << " " << n3 << std::endl;
+  std::cout << " Input weighted associated Legendres size: " << n1 << " " << n2 << " " << n3 << std::endl;
 
   weighted_associated_legendres.resize(n3);
 
   const double *p = ass_legs.data();
-  for(int i = 0; i < n3; i++) {
-    weighted_associated_legendres[i] = RMat(n1, n2-i, const_cast<double *>(p+i*n1));
-    p += n1*n2;
+
+  switch(MatlabData::options()->rotational_states) {
+
+  case _RotStatesAll_:
+    {
+      std::cout << " Weighted associated Legendres all states" << std::endl;
+      for(int i = 0; i < n3; i++) {
+	weighted_associated_legendres[i] = RMat(n1, n2-i, const_cast<double *>(p+i*n1));
+	p += n1*n2;
+      }
+    }
+    break;
+    
+  case _RotStatesOdd_ :
+    {
+      std::cout << " Weighted associated Legendres odd states" << std::endl;
+      
+      const int l_max_odd = EvolutionUtils::int_to_odd_left(l_max);
+      
+      for(int i = 0; i < n3; i++) {
+	const int l_min_odd = EvolutionUtils::int_to_odd_right(i+omega_min);
+	const int n = (l_max_odd-l_min_odd)/2 + 1;
+	
+	weighted_associated_legendres[i] = RMat(n1, n);
+	
+	double *wp = weighted_associated_legendres[i];
+	for(int l = l_min_odd; l <= l_max_odd; l += 2) {
+	  memcpy(wp, p+(l-omega_min)*n1, n1*sizeof(double));
+	  wp += n1;
+	}
+	
+	p += n1*n2;
+      }
+    }
+    
+    break;
+    
+  case _RotStatesEven_ :
+    {
+      std::cout << " Weighted associated Legendres even states" << std::endl;
+      
+      const int l_max_even = EvolutionUtils::int_to_even_left(l_max);
+      for(int i = 0; i < n3; i++) {
+	const int l_min_even = EvolutionUtils::int_to_even_right(i+omega_min);
+	const int n = (l_max_even-l_min_even)/2 + 1;
+	
+	weighted_associated_legendres[i] = RMat(n1, n);
+	
+	double *wp = weighted_associated_legendres[i];
+	for(int l = l_min_even; l <= l_max_even; l += 2) {
+	  memcpy(wp, p+(l-omega_min)*n1, n1*sizeof(double));
+	  wp += n1;
+	}
+	
+	p += n1*n2;
+      }
+    }
+    
+    break;
+    
+  default:
+    std::cout << " Rotational states error" << std::endl;
+    insist(0);
+    break;
   }
 }

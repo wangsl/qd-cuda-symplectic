@@ -18,7 +18,7 @@ fprintf(' Gaussian wavepacket module: %.15f\n', sum(conj(G).*G)*R1.dr);
 [ eO2, phiO2 ] = OOVibRotWaveFunction(R2, jRot, nVib);
 
 P = legendre(jRot, Theta.x, 'norm');
-P = P(1, :);
+P = P(2, :);
 
 fprintf(' Legendre polynomail module: %.15f\n', sum(P.^2.*Theta.w));
 

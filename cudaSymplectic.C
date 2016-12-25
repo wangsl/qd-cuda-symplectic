@@ -16,7 +16,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
   const int np = std::cout.precision();
   std::cout.precision(14);
   
-  std::cout << " **********************************************\n"
+  std::cout << "\n"
+	    << " **********************************************\n"
 	    << " *                                            *\n"
 	    << " *  Quantum Dynamics Time Evolution with CUDA *\n" 
 	    << " *                                            *\n"

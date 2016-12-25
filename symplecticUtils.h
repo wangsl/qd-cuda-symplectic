@@ -22,6 +22,7 @@ namespace SymplecticUtils {
     
   } coeffients_m6_n4;
   
+  /*
   // from Computer Physics Communications 98, 1 (1996)
   struct {
     
@@ -34,6 +35,7 @@ namespace SymplecticUtils {
     const int size = 6;
     
   } coeffients_m6_n4_1;
+  */
 }
 
 #endif /* SYMPLECTIC_UTILS_H */

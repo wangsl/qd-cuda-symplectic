@@ -131,7 +131,7 @@ private:
   void calculate_energy_and_module();
 
   double dot_product_with_volume_element(const double *x_dev, const double *y_dev) const;
-  double dot_product_with_volume_element_for_legendres(const double *x_dev, const double *y_dev) const;
+  //double dot_product_with_volume_element_for_legendres(const double *x_dev, const double *y_dev) const;
 
   const double *memory_0() const { return weighted_psi_dev; }
 
@@ -140,6 +140,10 @@ private:
   const double *memory_10() const { return device_work_dev; }
 
   void setup_reaction_probabilities();
+
+  int number_of_associated_Legendres() const;
+  int minimum_Legendres_order() const;
+  int l_minimum() const { return minimum_Legendres_order(); }
 };
 
 #endif /* OMEGA_WAVEPACKET_H */

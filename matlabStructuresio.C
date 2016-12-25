@@ -1,5 +1,5 @@
 
-/* created at: 2016-10-25 12:59:40 */
+/* created at: 2016-11-08 22:03:58 */
 
 #include <iostream>
 using namespace std;
@@ -75,6 +75,7 @@ void Options::write_fields(ostream &s) const
   s << Indent() << "steps_to_copy_psi_from_device_to_host " << steps_to_copy_psi_from_device_to_host << "\n";
   s << Indent() << "potential_cutoff " << potential_cutoff << "\n";
   s << Indent() << "calculate_reaction_probabilities " << calculate_reaction_probabilities << "\n";
+  s << Indent() << "rotational_states " << rotational_states << "\n";
 }
 
 ostream & operator <<(ostream &s, const WavepacketParameters &c)

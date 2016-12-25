@@ -95,6 +95,7 @@ public:
   const int &steps_to_copy_psi_from_device_to_host; // out
   const double &potential_cutoff; // out
   const int &calculate_reaction_probabilities; // out
+  int &rotational_states; // out
   
   Options(const mxArray *mx);
   ~Options();
