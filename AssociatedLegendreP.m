@@ -1,8 +1,6 @@
 
 function [ P ] = AssociatedLegendreP(OmegaMin, OmegaMax, lMax, x)
 
-% P(:, 1:Omega-1, Omega) = 0
-
 assert(OmegaMin == 0 | OmegaMin == 1);
 assert(OmegaMax >= OmegaMin);
 assert(lMax >= OmegaMax);
