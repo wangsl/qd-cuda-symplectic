@@ -221,33 +221,6 @@ double OmegaWavepacket::dot_product_with_volume_element(const double *x_dev, con
   return s;
 }
 
-/*
-double OmegaWavepacket::
-dot_product_with_volume_element_for_legendres(const double *x_dev, const double *y_dev) const
-{
-  insist(x_dev && y_dev);
-
-  const int &n1 = MatlabData::r1()->n;
-  const int &n2 = MatlabData::r2()->n;
-  
-  //const int n_Legs = MatlabData::wavepacket_parameters()->l_max - omega + 1;
-  const int n_ass_Legs = number_of_associated_legendres();
-  
-  const double &dr1 = MatlabData::r1()->dr;
-  const double &dr2 = MatlabData::r2()->dr;
-
-  const double *x = x_dev + omega*n1*n2;
-  const double *y = y_dev + omega*n1*n2;
-  
-  double s = 0.0;
-  insist(cublasDdot(cublas_handle, n1*n2*n_ass_Legs, x, 1, y, 1, &s) == CUBLAS_STATUS_SUCCESS);
-  
-  s *= dr1*dr2;
-
-  return s;
-}
-*/
-
 void OmegaWavepacket::calculate_wavepacket_module()
 {
   _wavepacket_module_from_real = dot_product_with_volume_element(weighted_psi_real_dev,
@@ -444,14 +417,13 @@ void OmegaWavepacket::calculate_T_bend_T_sym_add_to_T_angle_legendre_psi_dev()
   int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_ass_Legs);
 
   int a = 1; int b = omega;
-  /*
+  
   const int &rot_states = MatlabData::options()->rotational_states;
   if(rot_states == _RotStatesOdd_) {
     a = 2; b = EvolutionUtils::int_to_odd_right(omega);
   } else if(rot_states == _RotStatesEven_) {
     a = 2; b = EvolutionUtils::int_to_even_right(omega);
   } 
-  */
   
   _add_T_bend_T_sym_to_T_angle_legendre_psi_dev_<<<n_blocks, n_threads, 
     (n1+n2+1)*sizeof(double), *computation_stream>>>(T_angle_legendre_psi_dev_, 
@@ -480,15 +452,14 @@ void OmegaWavepacket::calculate_T_asym_add_to_T_angle_legendre_psi_dev(const dou
   const double *legendre_psi_dev_ = psi_dev + omega_max*n1*n2;
 
   int a = 1; int b = omega_max;
-  /*
+  
   const int &rot_states = MatlabData::options()->rotational_states;
   if(rot_states == _RotStatesOdd_) {
     a = 2; b = EvolutionUtils::int_to_odd_right(omega_max);
   } else if(rot_states == _RotStatesEven_) {
     a = 2; b = EvolutionUtils::int_to_even_right(omega_max);
   } 
-  */
-  
+
   const int n_threads = _NTHREADS_;
   int n_blocks = cudaUtils::number_of_blocks(n_threads, n1*n2*n_ass_Legs);
   

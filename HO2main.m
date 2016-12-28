@@ -32,14 +32,14 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(10);
+time.total_steps = int32(1000000);
 time.time_step = 0.5;
 time.steps = int32(0);
 
 % r1: R
 
 r1.n = int32(256);
-r1.r = linspace(1.6, 16.0, r1.n);
+r1.r = linspace(0.55, 16.0, r1.n);
 r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
 r1.mass = masses(1)*(masses(2)+masses(3))/(masses(1)+masses(2)+ ...
@@ -61,17 +61,17 @@ fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
 
 % r2: r
 
-r2.n = int32(256);
-r2.r = linspace(1.6, 12.0, r2.n);
+r2.n = int32(320);
+r2.r = linspace(1.2, 18.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
 r2.mass = masses(2)*masses(3)/(masses(2)+masses(3));
 
-r2.dump = WoodsSaxon(4.0, 10.0, r2.r);
+r2.dump = WoodsSaxon(4.0, 16.5, r2.r);
 
 % dividing surface
 
-rd = 7.0;
+rd = 12.0;
 nDivdSurf = int32((rd - min(r2.r))/r2.dr);
 r2Div = double(nDivdSurf)*r2.dr + min(r2.r);
 fprintf(' Dviding surface: %.15f\n', r2Div);
@@ -91,8 +91,8 @@ theta.n = int32(140);
 options.wave_to_matlab = 'HO2Matlab';
 options.CRPMatFile = sprintf('CRPMat-j%d-v%d.mat', jRot, nVib);
 options.steps_to_copy_psi_from_device_to_host = int32(100);
-options.potential_cutoff = 2.0;
-options.rotational_states = int32(1);
+options.potential_cutoff = 0.5;
+options.rotational_states = int32(0);
 options.calculate_reaction_probabilities = int32(1);
 
 % setup potential energy surface and initial wavepacket
@@ -165,7 +165,7 @@ wavepacket_parameters.weighted_wavepackets = wavepackets;
 CRP.mat_file = sprintf('CRPMat-j%d-v%d.mat', jRot, nVib);
 CRP.eDiatomic = eO2;
 CRP.n_dividing_surface = nDivdSurf;
-CRP.n_gradient_points = int32(31);
+CRP.n_gradient_points = int32(51);
 CRP.n_energies = int32(300);
 eLeft = 0.5/H2eV + eO2;
 eRight = 2.0/H2eV + eO2;
@@ -185,7 +185,7 @@ HO2Data.CRP = CRP;
 
 HO2Data.wavepacket_parameters = wavepacket_parameters;
 
-%PlotPotWave();
+PlotPotWave();
 %return
 
 %clearvars -except HO2Data
@@ -198,6 +198,6 @@ cudaSymplectic(HO2Data);
 toc
 
 %AssLegPTest(P, double(options.rotational_states), OmegaMin)
-
+%size(myP)
 return
 

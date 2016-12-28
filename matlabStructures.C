@@ -225,8 +225,6 @@ void WavepacketParameters::setup_weighted_associated_legendres()
   }
 
   /*
-  // now to write weighted_associated_legendres to binary fileto check
-
   std::cout << " *** Binary file to test ***" << std::endl;
 
   ofstream bout("AssLegP.bin", ios::out|ios::binary);

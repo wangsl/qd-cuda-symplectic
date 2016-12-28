@@ -17,8 +17,11 @@ fprintf(' Gaussian wavepacket module: %.15f\n', sum(conj(G).*G)*R1.dr);
 
 [ eO2, phiO2 ] = OOVibRotWaveFunction(R2, jRot, nVib);
 
+% Initial rotational state: P(jRot, Omega)
+% Index: Omega+1
+
 P = legendre(jRot, Theta.x, 'norm');
-P = P(2, :);
+P = P(1, :);
 
 fprintf(' Legendre polynomail module: %.15f\n', sum(P.^2.*Theta.w));
 

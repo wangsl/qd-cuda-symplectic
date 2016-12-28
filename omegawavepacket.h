@@ -111,7 +111,7 @@ private:
 
   void setup_weighted_psi();
   void copy_weighted_psi_from_host_to_device();
-
+  
   void copy_weighted_associated_legendres_from_host_to_device();
   
   void setup_work_dev();
