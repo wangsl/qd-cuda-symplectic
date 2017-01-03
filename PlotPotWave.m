@@ -16,7 +16,7 @@ pot = HO2Data.potential;
 
 omega = 1;
 
-k = 20;
+k = 1;
 
 psiReal = real(HO2Data.wavepacket_parameters.weighted_wavepackets(:, ...
 						  :, k, omega))/sqrt(theta.w(k));
@@ -34,8 +34,8 @@ if isempty(has_PotWavePlot)
   hold on;
   
   [ ~, hpsi ] = contour(r1.r, r2.r, psiReal, ...
-			[ -2.0:0.02:-0.01 0.01:0.02:1.0 ], 'zDataSource', 'psiReal');
-  set(hpsi, 'LineWidth', 1.5);
+			[ -3.0:0.02:-0.01 0.01:0.02:3.0 ], 'zDataSource', 'psiReal');
+  set(hpsi, 'LineWidth', 1.0);
   set(gca, 'CLim', [-0.5, 0.5]);
   colormap jet
   colorbar('vert')

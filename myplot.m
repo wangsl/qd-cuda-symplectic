@@ -3,36 +3,93 @@ clear all
 
 H2eV = 27.21138505;
 
+nMax = 20;
 
-%{
-load('CRPMat-j1-v0-all.mat')
-eAll = CRP.energies*H2eV;
-CRPAll = -2*CRP.CRP;
+matFiles = cell(1, nMax);
+energies = cell(1, nMax);
+CRPs = cell(1, nMax);
 
-load('CRPMat-j1-v0-odd.mat')
-eOdd = CRP.energies*H2eV;
-CRPOdd = -2*CRP.CRP;
+n = 0;
+for i = 2 : nMax
+  index = strcat('00', int2str(i));
+  index = index(end-1:end);
+  matFile = strcat('CRPMat-j1-v0-', index, '.mat');
+  if exist(matFile, 'file') == 2
+    fprintf('%s\n', matFile)
+    n = n + 1;
+    load(matFile)
+    energies{n} = CRP.energies*H2eV;
+    CRPs{n} = CRP.CRP;
+    matFiles{n} = matFile;
+  end
+end
 
-plot(eAll, CRPAll, 'r', eOdd, CRPOdd, 'b', 'LineWidth', 2)
-%}
+for i = 1 : n
+  plot(energies{i}, -CRPs{i}, 'LineWidth', 0.5, 'DisplayName', matFiles{i})
+  hold on
+end
 
-load('CRPMat-j1-v0.mat')
-eAll = CRP.energies*H2eV;
-CRPAll = CRP.CRP;
+legend('show', 'Location','northwest'); %,'Orientation','horizontal')
 
-plot(eAll, -CRPAll, 'b', 'LineWidth', 2)
+hold off
 
 set(gca, 'xtick', [0.4:0.2:2.2]);
 
 xlabel('Energy (eV)')
 ylabel('Reaction probabilities')
 
-axis([0.5 2.2 0 0.70])
+axis([0.7 2.2 0 0.70])
 
-%axis([0.8 1.45 0 0.40])
+pbaspect([1 0.5 1])
+
+set(gca,'XMinorTick','on','YMinorTick','on')
 
 grid on
 grid minor
 
-print -dpdf CRP.pdf
+print -dpdf CRPv0j1.pdf
+
+return
+
+load('CRPMat-j1-v0-2.mat')
+e2 = CRP.energies*H2eV;
+CRP2 = CRP.CRP;
+
+load('CRPMat-j1-v0-3.mat')
+e3 = CRP.energies*H2eV;
+CRP3 = CRP.CRP;
+
+load('CRPMat-j1-v0-4.mat')
+e4 = CRP.energies*H2eV;
+CRP4 = CRP.CRP;
+
+load('CRPMat-j1-v0-5.mat')
+e5 = CRP.energies*H2eV;
+CRP5 = CRP.CRP;
+
+plot(e2, -CRP2, 'k', ...
+     e3, -CRP3, 'b', ...
+     e4, -CRP4, 'g', ...
+     e5, -CRP5, 'r', ...
+     'LineWidth', 1)
+
+%plot(e2, -CRP2, 'b', 'LineWidth', 1)
+
+set(gca, 'xtick', [0.4:0.2:2.2]);
+
+xlabel('Energy (eV)')
+ylabel('Reaction probabilities')
+
+axis([0.7 2.2 0 0.70])
+
+%axis([0.8 1.8 0 0.60])
+
+pbaspect([1 0.5 1])
+
+set(gca,'XMinorTick','on','YMinorTick','on')
+
+grid on
+grid minor
+
+print -dpdf CRPv0j1.pdf
 

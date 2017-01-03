@@ -117,7 +117,7 @@ wavepacket_parameters.weighted_wavepackets = wavepackets;
 
 % Reaction probabilities
 
-CRP.mat_file = sprintf('CRPMat-j%d-v%d-2.mat', jRot, nVib);
+CRP.mat_file = sprintf('CRPMat-j%d-v%d-06.mat', jRot, nVib);
 CRP.eDiatomic = eO2;
 CRP.n_dividing_surface = nDivdSurf;
 CRP.n_gradient_points = int32(51);

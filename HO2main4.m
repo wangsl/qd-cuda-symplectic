@@ -28,13 +28,13 @@ masses = masses*MassAU;
 
 % time
 
-time.total_steps = int32(1000000);
-time.time_step = 0.2;
+time.total_steps = int32(5000000);
+time.time_step = 0.25;
 time.steps = int32(0);
 
 % r1: R
 
-r1.n = int32(256);
+r1.n = int32(360);
 r1.r = linspace(0.5, 16.0, r1.n);
 r1.left = r1.r(1);
 r1.dr = r1.r(2) - r1.r(1);
@@ -42,33 +42,45 @@ r1.mass = masses(1)*(masses(2)+masses(3))/(masses(1)+masses(2)+ ...
 					   masses(3));
 r1.dump = WoodsSaxon(4.0, 14.5, r1.r);
 
-r1.r0 = 11.0;
-r1.k0 = 12.0;
-r1.delta = 0.3;
+r1.r0 = 10.0;
+r1.k0 = 11.0;
+r1.delta = 0.2;
+
+%%{
+r1.r0 = 10.0;
+r1.k0 = 0.35;
+r1.delta = 0.06;
+%%}
+
+%%{
+r1.r0 = 10.0;
+r1.k0 = 11.9366;
+r1.delta = 0.6;
+%%}
 
 eGT = 1/(2*r1.mass)*(r1.k0^2 + 1/(2*r1.delta^2));
 fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
 
 % r2: r
 
-r2.n = int32(360);
-r2.r = linspace(1.4, 18.0, r2.n);
+r2.n = int32(512);
+r2.r = linspace(1.4, 20.0, r2.n);
 r2.left = r2.r(1);
 r2.dr = r2.r(2) - r2.r(1);
 r2.mass = masses(2)*masses(3)/(masses(2)+masses(3));
 
-r2.dump = WoodsSaxon(4.0, 16.5, r2.r);
+r2.dump = WoodsSaxon(4.0, 18.0, r2.r);
 
 % dividing surface
 
-rd = 12.5;
+rd = 13.0;
 nDivdSurf = int32((rd - min(r2.r))/r2.dr);
 r2Div = double(nDivdSurf)*r2.dr + min(r2.r);
 fprintf(' Dviding surface: %.15f\n', r2Div);
 
 % theta
 
-theta.n = int32(160);
+theta.n = int32(180);
 [ theta.x, theta.w ] = GaussLegendreGrids(theta.n);
 
 % options
@@ -76,7 +88,7 @@ theta.n = int32(160);
 options.wave_to_matlab = 'HO2Matlab';
 options.CRPMatFile = sprintf('CRPMat-j%d-v%d.mat', jRot, nVib);
 options.steps_to_copy_psi_from_device_to_host = int32(100);
-options.potential_cutoff = 0.10;
+options.potential_cutoff = 0.40;
 options.rotational_states = int32(0);
 options.calculate_reaction_probabilities = int32(1);
 
@@ -117,7 +129,7 @@ wavepacket_parameters.weighted_wavepackets = wavepackets;
 
 % Reaction probabilities
 
-CRP.mat_file = sprintf('CRPMat-j%d-v%d-2.mat', jRot, nVib);
+CRP.mat_file = sprintf('CRPMat-j%d-v%d-4.mat', jRot, nVib);
 CRP.eDiatomic = eO2;
 CRP.n_dividing_surface = nDivdSurf;
 CRP.n_gradient_points = int32(51);

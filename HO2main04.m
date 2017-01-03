@@ -43,8 +43,8 @@ r1.mass = masses(1)*(masses(2)+masses(3))/(masses(1)+masses(2)+ ...
 r1.dump = WoodsSaxon(4.0, 14.5, r1.r);
 
 r1.r0 = 11.0;
-r1.k0 = 12.0;
-r1.delta = 0.3;
+r1.k0 = 10.0;
+r1.delta = 0.4;
 
 eGT = 1/(2*r1.mass)*(r1.k0^2 + 1/(2*r1.delta^2));
 fprintf(' Gaussian wavepacket kinetic energy: %.15f\n', eGT)
@@ -117,7 +117,7 @@ wavepacket_parameters.weighted_wavepackets = wavepackets;
 
 % Reaction probabilities
 
-CRP.mat_file = sprintf('CRPMat-j%d-v%d-2.mat', jRot, nVib);
+CRP.mat_file = sprintf('CRPMat-j%d-v%d-04.mat', jRot, nVib);
 CRP.eDiatomic = eO2;
 CRP.n_dividing_surface = nDivdSurf;
 CRP.n_gradient_points = int32(51);
