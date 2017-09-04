@@ -11,6 +11,7 @@
 
 #include "evolutionUtils.h"
 #include "symplecticUtils.h"
+#include "genUtils.h"
 
 inline static void divide_into_chunks(const int n, const int m, int *chunks)
 {
@@ -211,7 +212,8 @@ void CUDAOpenmpMD::dump_wavepackets() const
 
 void CUDAOpenmpMD::calculate_reaction_probabilities(const int calculate)
 {
-  std::cout << " Calculate reaction probabilities " << calculate << std::endl;
+  if(calculate)
+    std::cout << " Calculate reaction probabilities " << calculate << std::endl;
 
 #pragma omp parallel for default(shared)
   for(int i_dev = 0; i_dev < n_devices(); i_dev++) 
@@ -221,7 +223,7 @@ void CUDAOpenmpMD::calculate_reaction_probabilities(const int calculate)
     RVec &CRP = MatlabData::crp_parameters()->CRP;
     CRP.zeros();
     for(int i_dev = 0; i_dev < n_devices(); i_dev++) 
-    CRP += wavepackets_on_single_device[i_dev]->reaction_probabilities;
+      CRP += wavepackets_on_single_device[i_dev]->reaction_probabilities;
   }
 }
 
@@ -239,6 +241,8 @@ void CUDAOpenmpMD::time_evolution()
     steps++;
 
     std::cout << "\n Step: " << steps << ", " << time_now() << std::endl;
+
+    const double time_start = get_time_now_in_secs();
     
     checkCudaErrors(cudaProfilerStart());
     
@@ -273,6 +277,14 @@ void CUDAOpenmpMD::time_evolution()
       mex_to_matlab(MatlabData::options()->wave_to_matlab);
       devices_synchoronize();
     }
+
+    const double time_end = get_time_now_in_secs();
+    
+    const int np = std::cout.precision();
+    std::cout.precision(3);
+    std::cout << " Elapsed wall time " << time_end - time_start << " secs" << std::endl;
+    std::cout.flush();
+    std::cout.precision(np);
   }
   std::cout << std::endl;
 }

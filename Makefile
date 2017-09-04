@@ -33,7 +33,7 @@ CUDAArchs= \
 CUDAArchs= \
 	-gencode arch=compute_37,code=sm_37 \
 	-gencode arch=compute_52,code=sm_52 \
-        -gencode arch=compute_52,code=compute_52 \
+	-gencode arch=compute_52,code=compute_52 \
 	-Xcompiler=\"-fPIC -pthread -fexceptions -m64 -fopenmp\"
 
 NVCCFLAGS = $(NVCCINCLUDE) $(CUDAArchs) -prec-div=true -prec-sqrt=true -rdc=true -std=c++11 

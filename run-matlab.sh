@@ -1,18 +1,27 @@
 #!/bin/bash
 
+#module purge
+#module load intel/16.0.3
+#module load gcc/4.8.2
+#module load cuda/7.5.18
+#module load matlab/2015b
+
 module purge
-module load intel/16.0.3
-module load gcc/4.8.2
-module load cuda/7.5.18
-module load matlab/2015b
+module load matlab/2017a
 
-export LD_PRELOAD=$LD_PRELOAD:$MKL_LIB/libmkl_intel_ilp64.so:$MKL_LIB/libmkl_core.so:$MKL_LIB/libmkl_intel_thread.so:$INTEL_LIB/libiomp5.so
+#export LD_PRELOAD=$LD_PRELOAD:$MKL_LIB/libmkl_intel_ilp64.so:$MKL_LIB/libmkl_core.so:$MKL_LIB/libmkl_intel_thread.so:$INTEL_LIB/libiomp5.so
 
-export LD_PRELOAD=$GCC_LIB/libstdc++.so:$LD_PRELOAD
+#export LD_PRELOAD=$GCC_LIB/libstdc++.so:$LD_PRELOAD
 
 #export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 #export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-export CUDA_VISIBLE_DEVICES="2,3,4,5"
+export CUDA_VISIBLE_DEVICES="2,3"
+
+for((i=0; i<50; i++)); do
+    taskset -c $(seq -s',' 1 2 27) matlab -nodisplay -r "HO2main; exit" > output-23-$i.log 2>&1
+done
+
+exit
 
 #export OMP_NUM_THREADS=1
 #export CUDA_LAUNCH_BLOCKING=1
